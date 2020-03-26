@@ -27,6 +27,14 @@ service Storage {
 
   // Capabilities returns a map of keys and values identifying the capabilities supported by the storage engine
   rpc Capabilities (google.protobuf.Empty) returns (CapabilitiesResponse);
+
+  rpc MeasurementNames(MeasurementNamesRequest) returns (stream StringValuesResponse);
+
+  rpc MeasurementTagKeys(MeasurementTagKeysRequest) returns (stream StringValuesResponse);
+
+  rpc MeasurementTagValues(MeasurementTagValuesRequest) returns (stream StringValuesResponse);
+
+  rpc MeasurementFields(MeasurementFieldsRequest) returns (stream MeasurementFieldsResponse);
 }
 
 message ReadFilterRequest {
@@ -195,4 +203,54 @@ message TagValuesRequest {
 // Response message for Storage.TagKeys and Storage.TagValues.
 message StringValuesResponse {
   repeated bytes values = 1;
+}
+
+// MeasurementNamesRequest is the request message for Storage.MeasurementNames.
+message MeasurementNamesRequest {
+  google.protobuf.Any source = 1 [(gogoproto.customname) = "Source"];
+  TimestampRange range = 2 [(gogoproto.nullable) = false];
+}
+
+// MeasurementTagKeysRequest is the request message for Storage.MeasurementTagKeys.
+message MeasurementTagKeysRequest {
+  google.protobuf.Any source = 1 [(gogoproto.customname) = "Source"];
+  TimestampRange range = 2 [(gogoproto.nullable) = false];
+  string measurement_name = 3 [(gogoproto.customname) = "MeasurementName"];
+  Predicate predicate = 4;
+}
+
+// MeasurementTagValuesRequest is the request message for Storage.MeasurementTagValues.
+message MeasurementTagValuesRequest {
+  google.protobuf.Any source = 1 [(gogoproto.customname) = "Source"];
+  TimestampRange range = 2 [(gogoproto.nullable) = false];
+  string measurement_name = 3 [(gogoproto.customname) = "MeasurementName"];
+  Predicate predicate = 4;
+}
+
+// MeasurementFieldsRequest is the request message for Storage.MeasurementFields.
+message MeasurementFieldsRequest {
+  google.protobuf.Any source = 1 [(gogoproto.customname) = "Source"];
+  TimestampRange range = 2 [(gogoproto.nullable) = false];
+  string measurement_name = 3 [(gogoproto.customname) = "MeasurementName"];
+  Predicate predicate = 4;
+}
+
+// Response message for Storage.MeasurementFields.
+message MeasurementFieldsResponse {
+  enum DataType {
+    option (gogoproto.goproto_enum_prefix) = false;
+
+    FLOAT = 0 [(gogoproto.enumvalue_customname) = "DataTypeFloat"];
+    INTEGER = 1 [(gogoproto.enumvalue_customname) = "DataTypeInteger"];
+    UNSIGNED = 2 [(gogoproto.enumvalue_customname) = "DataTypeUnsigned"];
+    BOOLEAN = 3 [(gogoproto.enumvalue_customname) = "DataTypeBoolean"];
+    STRING = 4 [(gogoproto.enumvalue_customname) = "DataTypeString"];
+  }
+
+  message Field {
+    string key = 1;
+    DataType type = 2;
+  }
+
+  repeated Field fields = 1;
 }
