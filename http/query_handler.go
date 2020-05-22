@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/flux/complete"
 	"github.com/influxdata/flux/csv"
 	"github.com/influxdata/flux/iocounter"
+	"github.com/influxdata/flux/lang"
 	"github.com/influxdata/flux/parser"
 	"github.com/influxdata/httprouter"
 	"github.com/influxdata/influxdb/v2"
@@ -29,14 +30,27 @@ import (
 	"github.com/influxdata/influxdb/v2/logger"
 	"github.com/influxdata/influxdb/v2/query"
 	"github.com/influxdata/influxdb/v2/query/influxql"
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
 const (
-	prefixQuery   = "/api/v2/query"
-	traceIDHeader = "Trace-Id"
+	prefixQuery              = "/api/v2/query"
+	traceIDHeader            = "Trace-Id"
+	StatsMeasurementName     = "queryd_stats"
+	FluxScriptName           = "flux_script"
+	OrganizationIDTagName    = "org_id"
+	ReadBytesFieldName       = "read_bytes"
+	ReadValuesFieldName      = "read_values"
+	ResponseBytesFieldName   = "response_bytes"
+	TotalDurationFieldName   = "total_duration_us"
+	PlanDurationFieldName    = "plan_duration_us"
+	RequeueDurationFieldName = "requeue_duration_us"
+	QueueDurationFieldName   = "queue_duration_us"
+	CompileDurationFieldName = "compile_duration_us"
+	ExecuteDurationFieldName = "execute_duration_us"
 )
 
 // FluxBackend is all services and associated parameters required to construct
@@ -61,6 +75,21 @@ func NewFluxBackend(log *zap.Logger, b *APIBackend) *FluxBackend {
 		ProxyQueryService: routingQueryService{
 			InfluxQLService: b.InfluxQLService,
 			DefaultService:  b.FluxService,
+			PointsWriter: MockInfluxDBWriter{
+				WriteFn: func(bp client.BatchPoints) error {
+					pointsCh := make(chan []string, 1)
+
+					points := make([]string, 0, len(bp.Points()))
+					for _, pt := range bp.Points() {
+						points = append(points, pt.String())
+					}
+					select {
+					case pointsCh <- points:
+					default:
+					}
+					return nil
+				},
+			},
 		},
 		OrganizationService: b.OrganizationService,
 	}
@@ -629,6 +658,16 @@ type routingQueryService struct {
 	InfluxQLService query.ProxyQueryService
 	// DefaultService handles all other queries
 	DefaultService query.ProxyQueryService
+
+	PointsWriter InfluxDBV1Writer
+}
+
+type MockInfluxDBWriter struct {
+	WriteFn func(bp client.BatchPoints) error
+}
+
+func (w MockInfluxDBWriter) Write(bp client.BatchPoints) error {
+	return w.WriteFn(bp)
 }
 
 func (s routingQueryService) Check(ctx context.Context) check.Response {
@@ -656,5 +695,98 @@ func (s routingQueryService) Query(ctx context.Context, w io.Writer, req *query.
 	if req.Request.Compiler.CompilerType() == influxql.CompilerType {
 		return s.InfluxQLService.Query(ctx, w, req)
 	}
-	return s.DefaultService.Query(ctx, w, req)
+	stats, err := s.DefaultService.Query(ctx, w, req)
+	if err != nil {
+		return stats, err
+	}
+
+	// script := getQuery(req.Request.Compiler)
+	// stats.Metadata.Add("fluxSrc", script)
+
+	s.reportBillingStats(zap.NewNop(), req.Request.OrganizationID, 0, stats)
+
+	return stats, err
+}
+
+type InfluxDBV1Writer interface {
+	Write(bp client.BatchPoints) error
+}
+
+func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influxdb.ID, bytesWritten int64, stats flux.Statistics) {
+	fmt.Println("reporting billing stats.............")
+	var scannedBytes, scannedValues int64
+	stats.Metadata.Range(func(key string, value interface{}) bool {
+		switch key {
+		case "influxdb/scanned-values":
+			v, _ := value.(int)
+			scannedValues += int64(v)
+		case "influxdb/scanned-bytes":
+			v, _ := value.(int)
+			scannedBytes += int64(v)
+		}
+		return true
+	})
+
+	pt, err := client.NewPoint(StatsMeasurementName, map[string]string{
+		OrganizationIDTagName: orgID.String(),
+	}, map[string]interface{}{ // bookmark
+		ReadBytesFieldName:  scannedBytes,
+		ReadValuesFieldName: scannedValues,
+		// ResponseBytesFieldName:   bytesWritten,
+		TotalDurationFieldName:   int64(stats.TotalDuration / 1000), // Divide nanoseconds by 1000 for microseconds.
+		PlanDurationFieldName:    int64(stats.PlanDuration / 1000),
+		RequeueDurationFieldName: int64(stats.RequeueDuration / 1000),
+		QueueDurationFieldName:   int64(stats.QueueDuration / 1000),
+		CompileDurationFieldName: int64(stats.CompileDuration / 1000),
+		ExecuteDurationFieldName: int64(stats.ExecuteDuration / 1000),
+		FluxScriptName:           stats.Metadata["fluxSrc"], // add flux scripc
+	})
+	if err != nil {
+		logger.Info("Failed to create point", zap.Error(err))
+		return
+	}
+
+	fmt.Println("points")
+	fmt.Println(pt)
+	fmt.Println("...................................!")
+	fmt.Println("...................................!")
+
+	bp, err := client.NewBatchPoints(client.BatchPointsConfig{})
+	if err != nil {
+		logger.Info("Failed to create batch points", zap.Error(err))
+		return
+	}
+	bp.AddPoint(pt)
+
+	if err := s.PointsWriter.Write(bp); err != nil {
+		logger.Info("Failed to write point", zap.Error(err))
+		return
+	}
+}
+
+func getQuery(compiler flux.Compiler) string {
+	q := "<unknown>"
+	// We do not account for REPL compiler, because that one shouldn't be sent over the wire.
+	switch c := compiler.(type) {
+	case lang.FluxCompiler:
+		q = c.Query
+	case lang.ASTCompiler:
+		if c.AST == nil {
+			break
+		}
+		if c.AST.Loc != nil {
+			if src := c.AST.Loc.Source; src != "" {
+				// If the source for the package is filled, that is the entire script,
+				// no need to waste time and cpu on formatting.
+				q = src
+			}
+		} else {
+			// Otherwise, format the AST (O(n) on the number of nodes in the AST).
+			q = ast.Format(c.AST)
+		}
+		// case *influxql.Compiler:
+		// 	q = c.Query
+	}
+
+	return q
 }
