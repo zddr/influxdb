@@ -28,8 +28,10 @@ import (
 	"github.com/influxdata/influxdb/v2/kit/tracing"
 	kithttp "github.com/influxdata/influxdb/v2/kit/transport/http"
 	"github.com/influxdata/influxdb/v2/logger"
+	"github.com/influxdata/influxdb/v2/models"
 	"github.com/influxdata/influxdb/v2/query"
 	"github.com/influxdata/influxdb/v2/query/influxql"
+	"github.com/influxdata/influxdb/v2/storage"
 	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -75,21 +77,7 @@ func NewFluxBackend(log *zap.Logger, b *APIBackend) *FluxBackend {
 		ProxyQueryService: routingQueryService{
 			InfluxQLService: b.InfluxQLService,
 			DefaultService:  b.FluxService,
-			PointsWriter: MockInfluxDBWriter{
-				WriteFn: func(bp client.BatchPoints) error {
-					pointsCh := make(chan []string, 1)
-
-					points := make([]string, 0, len(bp.Points()))
-					for _, pt := range bp.Points() {
-						points = append(points, pt.String())
-					}
-					select {
-					case pointsCh <- points:
-					default:
-					}
-					return nil
-				},
-			},
+			PointsWriter:    b.PointsWriter,
 		},
 		OrganizationService: b.OrganizationService,
 	}
@@ -654,7 +642,7 @@ type routingQueryService struct {
 	// DefaultService handles all other queries
 	DefaultService query.ProxyQueryService
 
-	PointsWriter InfluxDBV1Writer
+	PointsWriter storage.PointsWriter
 }
 
 type MockInfluxDBWriter struct {
@@ -697,7 +685,7 @@ func (s routingQueryService) Query(ctx context.Context, w io.Writer, req *query.
 	// script := getQuery(req.Request.Compiler)
 	// stats.Metadata.Add("fluxSrc", script)
 
-	s.reportBillingStats(zap.NewNop(), req.Request.OrganizationID, 0, stats)
+	s.reportBillingStats(ctx, zap.NewNop(), req.Request.OrganizationID, 0, stats)
 
 	return stats, err
 }
@@ -706,7 +694,7 @@ type InfluxDBV1Writer interface {
 	Write(bp client.BatchPoints) error
 }
 
-func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influxdb.ID, bytesWritten int64, stats flux.Statistics) {
+func (s routingQueryService) reportBillingStats(ctx context.Context, logger *zap.Logger, orgID influxdb.ID, bytesWritten int64, stats flux.Statistics) {
 	var scannedBytes, scannedValues int64
 	stats.Metadata.Range(func(key string, value interface{}) bool {
 		switch key {
@@ -720,9 +708,10 @@ func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influx
 		return true
 	})
 
-	pt, err := client.NewPoint(StatsMeasurementName, map[string]string{
+	orgIDTag := models.NewTags(map[string]string{
 		OrganizationIDTagName: orgID.String(),
-	}, map[string]interface{}{ // bookmark
+	})
+	fields := map[string]interface{}{
 		ReadBytesFieldName:  scannedBytes,
 		ReadValuesFieldName: scannedValues,
 		// ResponseBytesFieldName:   bytesWritten,
@@ -732,8 +721,10 @@ func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influx
 		QueueDurationFieldName:   int64(stats.QueueDuration / 1000),
 		CompileDurationFieldName: int64(stats.CompileDuration / 1000),
 		ExecuteDurationFieldName: int64(stats.ExecuteDuration / 1000),
-		FluxScriptName:           stats.Metadata["fluxSrc"], // add flux scripc
-	})
+		FluxScriptName:           stats.Metadata["fluxSrc"][0], // add flux scripc
+	}
+
+	pt, err := models.NewPoint(StatsMeasurementName, orgIDTag, fields, time.Now())
 	if err != nil {
 		logger.Info("Failed to create point", zap.Error(err))
 		return
@@ -742,15 +733,10 @@ func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influx
 	fmt.Print("POINTS:")
 	fmt.Println(pt)
 
+	var pts []models.Point
+	pts = append(pts, pt)
 
-	bp, err := client.NewBatchPoints(client.BatchPointsConfig{})
-	if err != nil {
-		logger.Info("Failed to create batch points", zap.Error(err))
-		return
-	}
-	bp.AddPoint(pt)
-
-	if err := s.PointsWriter.Write(bp); err != nil {
+	if err := s.PointsWriter.WritePoints(ctx, pts); err != nil {
 		logger.Info("Failed to write point", zap.Error(err))
 		return
 	}
