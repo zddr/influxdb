@@ -30,7 +30,6 @@ func (s *SourceProxyQueryService) Query(ctx context.Context, w io.Writer, req *q
 	case influxql.CompilerType:
 		return s.queryInfluxQL(ctx, w, req)
 	case lang.FluxCompilerType:
-		fmt.Println(".....................2")
 		st, err := s.queryFlux(ctx, w, req)
 		if err != nil {
 			return st, err

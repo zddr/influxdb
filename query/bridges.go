@@ -138,7 +138,6 @@ func (b ProxyQueryServiceAsyncBridge) Query(ctx context.Context, w io.Writer, re
 	defer span.Finish()
 
 	script := getQuery(req.Request.Compiler)
-	fmt.Println(script)
 	q, err := b.AsyncQueryService.Query(ctx, &req.Request)
 	if err != nil {
 		return flux.Statistics{}, tracing.LogError(span, err)

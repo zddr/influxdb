@@ -210,9 +210,6 @@ func (h *FluxHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	hd.SetHeaders(w)
 
-	fmt.Println("....................")
-	fmt.Println("aaaaaaaaaaaaaaa")
-	fmt.Println("....................")
 	cw := iocounter.Writer{Writer: w}
 	stats, err := h.ProxyQueryService.Query(ctx, &cw, req)
 	if err != nil {
@@ -399,7 +396,6 @@ type FluxService struct {
 // Query runs a flux query against a influx server and sends the results to the io.Writer.
 // Will use the token from the context over the token within the service struct.
 func (s *FluxService) Query(ctx context.Context, w io.Writer, r *query.ProxyRequest) (flux.Statistics, error) {
-	fmt.Println("query handlig......")
 	span, ctx := tracing.StartSpanFromContext(ctx)
 	defer span.Finish()
 	u, err := NewURL(s.Addr, prefixQuery)
@@ -473,7 +469,6 @@ type FluxQueryService struct {
 
 // Query runs a flux query against a influx server and decodes the result
 func (s *FluxQueryService) Query(ctx context.Context, r *query.Request) (flux.ResultIterator, error) {
-	fmt.Println("............. hereh")
 	span, ctx := tracing.StartSpanFromContext(ctx)
 	defer span.Finish()
 
@@ -691,7 +686,6 @@ func (s routingQueryService) Check(ctx context.Context) check.Response {
 }
 
 func (s routingQueryService) Query(ctx context.Context, w io.Writer, req *query.ProxyRequest) (flux.Statistics, error) {
-	fmt.Println("routing query service")
 	if req.Request.Compiler.CompilerType() == influxql.CompilerType {
 		return s.InfluxQLService.Query(ctx, w, req)
 	}
@@ -713,7 +707,6 @@ type InfluxDBV1Writer interface {
 }
 
 func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influxdb.ID, bytesWritten int64, stats flux.Statistics) {
-	fmt.Println("reporting billing stats.............")
 	var scannedBytes, scannedValues int64
 	stats.Metadata.Range(func(key string, value interface{}) bool {
 		switch key {
@@ -746,10 +739,9 @@ func (s routingQueryService) reportBillingStats(logger *zap.Logger, orgID influx
 		return
 	}
 
-	fmt.Println("points")
+	fmt.Print("POINTS:")
 	fmt.Println(pt)
-	fmt.Println("...................................!")
-	fmt.Println("...................................!")
+
 
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{})
 	if err != nil {
