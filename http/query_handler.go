@@ -181,8 +181,12 @@ func (h *FluxHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	hd.SetHeaders(w)
 
+	fmt.Println("....................")
+	fmt.Println("aaaaaaaaaaaaaaa")
+	fmt.Println("....................")
 	cw := iocounter.Writer{Writer: w}
-	if _, err := h.ProxyQueryService.Query(ctx, &cw, req); err != nil {
+	stats, err := h.ProxyQueryService.Query(ctx, &cw, req)
+	if err != nil {
 		if cw.Count() == 0 {
 			// Only record the error headers IFF nothing has been written to w.
 			h.HandleHTTPError(ctx, err, w)
@@ -194,6 +198,8 @@ func (h *FluxHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 			zap.Error(err),
 		)
 	}
+
+	fmt.Println(stats)
 }
 
 type langRequest struct {
@@ -364,6 +370,7 @@ type FluxService struct {
 // Query runs a flux query against a influx server and sends the results to the io.Writer.
 // Will use the token from the context over the token within the service struct.
 func (s *FluxService) Query(ctx context.Context, w io.Writer, r *query.ProxyRequest) (flux.Statistics, error) {
+	fmt.Println("query handlig......")
 	span, ctx := tracing.StartSpanFromContext(ctx)
 	defer span.Finish()
 	u, err := NewURL(s.Addr, prefixQuery)
@@ -437,6 +444,7 @@ type FluxQueryService struct {
 
 // Query runs a flux query against a influx server and decodes the result
 func (s *FluxQueryService) Query(ctx context.Context, r *query.Request) (flux.ResultIterator, error) {
+	fmt.Println("............. hereh")
 	span, ctx := tracing.StartSpanFromContext(ctx)
 	defer span.Finish()
 
@@ -644,6 +652,7 @@ func (s routingQueryService) Check(ctx context.Context) check.Response {
 }
 
 func (s routingQueryService) Query(ctx context.Context, w io.Writer, req *query.ProxyRequest) (flux.Statistics, error) {
+	fmt.Println("routing query service")
 	if req.Request.Compiler.CompilerType() == influxql.CompilerType {
 		return s.InfluxQLService.Query(ctx, w, req)
 	}

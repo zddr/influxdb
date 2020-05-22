@@ -61,6 +61,7 @@ func (s *LoggingProxyQueryService) Query(ctx context.Context, w io.Writer, req *
 	if s.cond != nil && !s.cond(ctx) {
 		// Logging is conditional, and we are not logging this request.
 		// Just invoke the wrapped service directly.
+		fmt.Println("...... proxy query service .........")
 		return s.proxyQueryService.Query(ctx, w, req)
 	}
 

@@ -3,13 +3,17 @@ package query
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/influxdata/flux"
+	"github.com/influxdata/flux/ast"
 	"github.com/influxdata/flux/csv"
+	"github.com/influxdata/flux/lang"
 	platform "github.com/influxdata/influxdb/v2"
 	"github.com/influxdata/influxdb/v2/kit/check"
 	"github.com/influxdata/influxdb/v2/kit/tracing"
+	// "github.com/influxdata/influxdb/v2/query/influxql"
 )
 
 // QueryServiceBridge implements the QueryService interface while consuming the AsyncQueryService interface.
@@ -133,6 +137,8 @@ func (b ProxyQueryServiceAsyncBridge) Query(ctx context.Context, w io.Writer, re
 	span, ctx := tracing.StartSpanFromContext(ctx)
 	defer span.Finish()
 
+	script := getQuery(req.Request.Compiler)
+	fmt.Println(script)
 	q, err := b.AsyncQueryService.Query(ctx, &req.Request)
 	if err != nil {
 		return flux.Statistics{}, tracing.LogError(span, err)
@@ -146,10 +152,41 @@ func (b ProxyQueryServiceAsyncBridge) Query(ctx context.Context, w io.Writer, re
 	// Release the results and collect the statistics regardless of the error.
 	results.Release()
 	stats := results.Statistics()
+
 	if err != nil {
 		return stats, tracing.LogError(span, err)
 	}
+
+	stats.Metadata.Add("fluxSrc", script)
+	fmt.Printf("%#v", stats.Metadata)
 	return stats, nil
+}
+
+func getQuery(compiler flux.Compiler) string {
+	q := "<unknown>"
+	// We do not account for REPL compiler, because that one shouldn't be sent over the wire.
+	switch c := compiler.(type) {
+	case lang.FluxCompiler:
+		q = c.Query
+	case lang.ASTCompiler:
+		if c.AST == nil {
+			break
+		}
+		if c.AST.Loc != nil {
+			if src := c.AST.Loc.Source; src != "" {
+				// If the source for the package is filled, that is the entire script,
+				// no need to waste time and cpu on formatting.
+				q = src
+			}
+		} else {
+			// Otherwise, format the AST (O(n) on the number of nodes in the AST).
+			q = ast.Format(c.AST)
+		}
+		// case *influxql.Compiler:
+		// 	q = c.Query
+	}
+
+	return q
 }
 
 // Check returns the status of this query service.  Since this bridge consumes an AsyncQueryService,

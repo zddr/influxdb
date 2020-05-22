@@ -213,6 +213,7 @@ func (h *SourceHandler) handlePostSourceQuery(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	fmt.Println(".............http ......")
 	_, err = querySvc.Query(ctx, w, req)
 	if err != nil {
 		h.HandleHTTPError(ctx, err, w)

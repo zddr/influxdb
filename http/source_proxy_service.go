@@ -30,7 +30,14 @@ func (s *SourceProxyQueryService) Query(ctx context.Context, w io.Writer, req *q
 	case influxql.CompilerType:
 		return s.queryInfluxQL(ctx, w, req)
 	case lang.FluxCompilerType:
-		return s.queryFlux(ctx, w, req)
+		fmt.Println(".....................2")
+		st, err := s.queryFlux(ctx, w, req)
+		if err != nil {
+			return st, err
+		}
+		src := req.Request.Source
+		st.Metadata.Add("fluxSrc", src)
+		return st, nil
 	}
 	return flux.Statistics{}, fmt.Errorf("compiler type not supported")
 }
