@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
@@ -21,6 +22,7 @@ import (
 	"github.com/influxdata/flux/lang"
 	"github.com/influxdata/flux/parser"
 	"github.com/influxdata/httprouter"
+	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/influxdata/influxdb/v2"
 	pcontext "github.com/influxdata/influxdb/v2/context"
 	"github.com/influxdata/influxdb/v2/http/metric"
@@ -199,7 +201,7 @@ func (h *FluxHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	hd.SetHeaders(w)
 
 	cw := iocounter.Writer{Writer: w}
-	stats, err := h.ProxyQueryService.Query(ctx, &cw, req)
+	_, err = h.ProxyQueryService.Query(ctx, &cw, req)
 	if err != nil {
 		if cw.Count() == 0 {
 			// Only record the error headers IFF nothing has been written to w.
@@ -213,7 +215,6 @@ func (h *FluxHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	fmt.Println(stats)
 }
 
 type langRequest struct {
@@ -690,10 +691,6 @@ func (s routingQueryService) Query(ctx context.Context, w io.Writer, req *query.
 	return stats, err
 }
 
-type InfluxDBV1Writer interface {
-	Write(bp client.BatchPoints) error
-}
-
 func (s routingQueryService) reportBillingStats(ctx context.Context, logger *zap.Logger, orgID influxdb.ID, bytesWritten int64, stats flux.Statistics) {
 	var scannedBytes, scannedValues int64
 	stats.Metadata.Range(func(key string, value interface{}) bool {
@@ -721,7 +718,7 @@ func (s routingQueryService) reportBillingStats(ctx context.Context, logger *zap
 		QueueDurationFieldName:   int64(stats.QueueDuration / 1000),
 		CompileDurationFieldName: int64(stats.CompileDuration / 1000),
 		ExecuteDurationFieldName: int64(stats.ExecuteDuration / 1000),
-		FluxScriptName:           stats.Metadata["fluxSrc"][0], // add flux scripc
+		FluxScriptName:           stats.Metadata["fluxSrc"], // add flux scripc
 	}
 
 	pt, err := models.NewPoint(StatsMeasurementName, orgIDTag, fields, time.Now())
@@ -730,16 +727,30 @@ func (s routingQueryService) reportBillingStats(ctx context.Context, logger *zap
 		return
 	}
 
-	fmt.Print("POINTS:")
-	fmt.Println(pt)
-
 	var pts []models.Point
 	pts = append(pts, pt)
 
-	if err := s.PointsWriter.WritePoints(ctx, pts); err != nil {
-		logger.Info("Failed to write point", zap.Error(err))
-		return
-	}
+	// create new client with default option for server url authenticate by token
+	client := influxdb2.NewClient("http://localhost:9999", "WB7fX2ew9j8LvckLZuHZ346eCNzJbvsFHtl6To_8NKVRPEillh82tpjtEs8j2kW_RwP321HXasn14n02iuTkOw==")
+	// user blocking write client for writes to desired bucket
+	writeAPI := client.WriteApiBlocking("default", "queryd_stats")
+	// create point using full params constructor
+
+	p := influxdb2.NewPoint("queryd_billing_2",
+		map[string]string{OrganizationIDTagName: orgID.String()},
+		map[string]interface{}{
+			TotalDurationFieldName:   int64(stats.TotalDuration / 1000), // Divide nanoseconds by 1000 for microseconds.
+			PlanDurationFieldName:    int64(stats.PlanDuration / 1000),
+			RequeueDurationFieldName: int64(stats.RequeueDuration / 1000),
+			QueueDurationFieldName:   int64(stats.QueueDuration / 1000),
+			CompileDurationFieldName: int64(stats.CompileDuration / 1000),
+			ExecuteDurationFieldName: int64(stats.ExecuteDuration / 1000),
+			FluxScriptName:           strip(stats.Metadata["fluxSrc"][0].(string)),
+		},
+		time.Now())
+
+	writeAPI.WritePoint(context.Background(), p)
+
 }
 
 func getQuery(compiler flux.Compiler) string {
@@ -767,4 +778,12 @@ func getQuery(compiler flux.Compiler) string {
 	}
 
 	return q
+}
+
+func strip(s string) string {
+	s = strings.Replace(s, "\"", "", -1)
+	s = strings.Replace(s, "\n", "", -1)
+	s = strings.Replace(s, " ", "", -1)
+	s = strings.Replace(s, "|", "", -1)
+	return s
 }

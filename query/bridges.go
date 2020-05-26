@@ -3,7 +3,6 @@ package query
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/influxdata/flux"
@@ -157,7 +156,6 @@ func (b ProxyQueryServiceAsyncBridge) Query(ctx context.Context, w io.Writer, re
 	}
 
 	stats.Metadata.Add("fluxSrc", script)
-	fmt.Printf("%#v", stats.Metadata)
 	return stats, nil
 }
 

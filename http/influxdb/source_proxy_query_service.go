@@ -37,8 +37,6 @@ func (s *SourceProxyQueryService) Query(ctx context.Context, w io.Writer, req *q
 		if err != nil {
 			return st, err
 		}
-		src := req.Request.Source
-		st.Metadata.Add("fluxSrc", src)
 		return st, nil
 
 		// return s.fluxQuery(ctx, w, req)
