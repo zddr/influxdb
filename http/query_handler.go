@@ -3,12 +3,14 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -214,7 +216,6 @@ func (h *FluxHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 			zap.Error(err),
 		)
 	}
-
 }
 
 type langRequest struct {
@@ -720,6 +721,24 @@ func (s routingQueryService) reportBillingStats(ctx context.Context, logger *zap
 		ExecuteDurationFieldName: int64(stats.ExecuteDuration / 1000),
 		FluxScriptName:           stats.Metadata["fluxSrc"], // add flux scripc
 	}
+
+	// Temporary - write to CSV file
+
+	f, err := os.OpenFile("queryperf.csv", os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
+	if err != nil {
+		fmt.Println(err)
+		f.Close()
+		return
+	}
+
+	n, err := fmt.Fprintf(f, "%x,%d,%d,%d,%d\n", md5.Sum([]byte(stats.Metadata["fluxSrc"][0].(string))), stats.CompileDuration, stats.ExecuteDuration, stats.PlanDuration, stats.TotalDuration)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Print("Successfully wrote %d values to file", n)
+	}
+
+	err = f.Close()
 
 	pt, err := models.NewPoint(StatsMeasurementName, orgIDTag, fields, time.Now())
 	if err != nil {
