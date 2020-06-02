@@ -315,7 +315,7 @@ func TestBatcher_Write(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        string
+		want        []string
 		wantFlushes int
 		wantErr     bool
 	}{
@@ -329,7 +329,7 @@ func TestBatcher_Write(t *testing.T) {
 				bucket: platform.ID(2),
 				r:      strings.NewReader("m1,t1=v1 f1=1"),
 			},
-			want:        "m1,t1=v1 f1=1",
+			want:        []string{"m1,t1=v1 f1=1"},
 			wantFlushes: 1,
 		},
 		{
@@ -342,7 +342,7 @@ func TestBatcher_Write(t *testing.T) {
 				bucket: platform.ID(2),
 				r:      strings.NewReader("m1,t1=v1 f1=1\nm2,t2=v2 f2=2\nm3,t3=v3 f3=3"),
 			},
-			want:        "m3,t3=v3 f3=3",
+			want:        []string{"m1,t1=v1 f1=1\n", "m2,t2=v2 f2=2\n", "m3,t3=v3 f3=3"},
 			wantFlushes: 3,
 		},
 		{
@@ -361,7 +361,7 @@ func TestBatcher_Write(t *testing.T) {
 			// mocking the write service here to either return an error
 			// or get back all the bytes from the reader.
 			var (
-				got        string
+				got        []string
 				gotFlushes int
 			)
 			svc := &mock.WriteService{
@@ -370,7 +370,7 @@ func TestBatcher_Write(t *testing.T) {
 						return fmt.Errorf("error")
 					}
 					b, err := ioutil.ReadAll(r)
-					got = string(b)
+					got = append(got, string(b))
 					gotFlushes++
 					return err
 				},
