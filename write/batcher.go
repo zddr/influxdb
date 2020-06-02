@@ -25,9 +25,12 @@ var _ platform.WriteService = (*Batcher)(nil)
 
 // Batcher batches line protocol for sends to output.
 type Batcher struct {
-	MaxFlushBytes    int                   // MaxFlushBytes is the maximum number of bytes to buffer before flushing
-	MaxFlushInterval time.Duration         // MaxFlushInterval is the maximum amount of time to wait before flushing
-	Service          platform.WriteService // Service receives batches flushed from Batcher.
+	// MaxFlushBytes is the maximum number of bytes to buffer before flushing
+	MaxFlushBytes int
+	// MaxFlushInterval is the maximum amount of time to wait before flushing
+	MaxFlushInterval time.Duration
+	// Service receives batches flushed from Batcher
+	Service platform.WriteService
 	// Number of concurrent workers that write to service
 	WriteWorkers int
 }

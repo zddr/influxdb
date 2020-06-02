@@ -38,6 +38,8 @@ type writeFlagsType struct {
 	SkipHeader                 int
 	IgnoreDataTypeInColumnName bool
 	Encoding                   string
+	Workers                    int
+	MaxFlushBytes              int
 }
 
 var writeFlags writeFlagsType
@@ -85,6 +87,9 @@ func cmdWrite(f *globalFlags, opt genericCLIOpts) *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&writeFlags.IgnoreDataTypeInColumnName, "xIgnoreDataTypeInColumnName", false, "Ignores dataType which could be specified after ':' in column name")
 	cmd.PersistentFlags().MarkHidden("xIgnoreDataTypeInColumnName") // should be used only upon explicit advice
 	cmd.PersistentFlags().StringVar(&writeFlags.Encoding, "encoding", "UTF-8", "Character encoding of input files or stdin")
+	cmd.PersistentFlags().IntVar(&writeFlags.Workers, "workers", 1, "The number of concurrent workers to write data")
+	cmd.PersistentFlags().IntVar(&writeFlags.MaxFlushBytes, "xMaxFlushBytes", write.DefaultMaxBytes, "The maximum number of bytes to buffer before flushing")
+	cmd.PersistentFlags().MarkHidden("xMaxFlushBytes") // should be used only upon explicit advice or during testing
 
 	cmdDryRun := opt.newCmd("dryrun", fluxWriteDryrunF, false)
 	cmdDryRun.Args = cobra.MaximumNArgs(1)
@@ -285,12 +290,14 @@ func fluxWriteF(cmd *cobra.Command, args []string) error {
 
 	// write to InfluxDB
 	s := write.Batcher{
+		MaxFlushBytes: writeFlags.MaxFlushBytes,
 		Service: &ihttp.WriteService{
 			Addr:               flags.Host,
 			Token:              flags.Token,
 			Precision:          writeFlags.Precision,
 			InsecureSkipVerify: flags.skipVerify,
 		},
+		WriteWorkers: writeFlags.Workers,
 	}
 	if err := s.Write(ctx, orgID, bucketID, r); err != nil && err != context.Canceled {
 		return fmt.Errorf("failed to write data: %v", err)
