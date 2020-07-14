@@ -137,6 +137,9 @@ test-js: node_modules
 	make -C ui test
 
 test-go:
+	uname -a
+	df
+	mount
 	$(GO_TEST) ./...
 
 test-promql-e2e:
