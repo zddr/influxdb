@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/influxdata/influxdb"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 const (

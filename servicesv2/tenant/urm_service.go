@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/influxdata/influxdb"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/kv"
 )
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/influxdata/influxdb"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
 	"go.uber.org/zap"
 )

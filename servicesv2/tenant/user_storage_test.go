@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdata/influxdb"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/bolt"
 	"github.com/influxdata/influxdb/servicesv2/kv"
 	"go.uber.org/zap/zaptest"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/influxdata/influxdb"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 var (

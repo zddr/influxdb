@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/influxdata/influxdb/v2"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 // PasswordFields will include the IDGenerator, and users and their passwords.

@@ -7,8 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/influxdata/influxdb"
-	"github.com/influxdata/influxdb/mock"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 const (
@@ -16,6 +15,51 @@ const (
 	userTwoID   = "020f755c3c082001"
 	userThreeID = "020f755c3c082002"
 )
+
+// IDGenerator is mock implementation of influxdb.IDGenerator.
+type IDGenerator struct {
+	IDFn func() influxdb.ID
+}
+
+// ID generates a new influxdb.ID from a mock function.
+func (g IDGenerator) ID() influxdb.ID {
+	return g.IDFn()
+}
+
+// NewIDGenerator is a simple way to create immutable id generator
+func NewIDGenerator(s string, t *testing.T) IDGenerator {
+	return IDGenerator{
+		IDFn: func() influxdb.ID {
+			id, err := influxdb.IDFromString(s)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return *id
+		},
+	}
+}
+
+// type MockIDGenerator struct {
+// 	Last  *influxdb.ID
+// 	Count int
+// }
+
+// const FirstMockID int = 65536
+
+// func NewMockIDGenerator() *MockIDGenerator {
+// 	return &MockIDGenerator{
+// 		Count: FirstMockID,
+// 	}
+// }
+
+// func (g *MockIDGenerator) ID() influxdb.ID {
+// 	id := influxdb.ID(g.Count)
+// 	g.Count++
+
+// 	g.Last = &id
+
+// 	return id
+// }
 
 var userCmpOptions = cmp.Options{
 	cmp.Comparer(func(x, y []byte) bool {
@@ -114,7 +158,7 @@ func CreateUser(
 		{
 			name: "create users with empty set",
 			fields: UserFields{
-				IDGenerator: mock.NewIDGenerator(userOneID, t),
+				IDGenerator: NewIDGenerator(userOneID, t),
 				Users:       []*influxdb.User{},
 			},
 			args: args{
@@ -136,7 +180,7 @@ func CreateUser(
 		{
 			name: "basic create user",
 			fields: UserFields{
-				IDGenerator: mock.NewIDGenerator(userTwoID, t),
+				IDGenerator: NewIDGenerator(userTwoID, t),
 				Users: []*influxdb.User{
 					{
 						ID:     MustIDBase16(userOneID),
@@ -169,7 +213,7 @@ func CreateUser(
 		{
 			name: "names should be unique",
 			fields: UserFields{
-				IDGenerator: &mock.IDGenerator{
+				IDGenerator: &IDGenerator{
 					IDFn: func() influxdb.ID {
 						return MustIDBase16(userOneID)
 					},
@@ -210,7 +254,7 @@ func CreateUser(
 			defer done()
 			ctx := context.Background()
 			err := s.CreateUser(ctx, tt.args.user)
-			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+			diffInfluxDBErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			// Delete only created users - ie., having a not nil ID
 			if tt.args.user.ID.Valid() {
@@ -310,7 +354,7 @@ func FindUserByID(
 			ctx := context.Background()
 
 			user, err := s.FindUserByID(ctx, tt.args.id)
-			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+			diffInfluxDBErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			if diff := cmp.Diff(user, tt.wants.user, userCmpOptions...); diff != "" {
 				t.Errorf("user is different -got/+want\ndiff %s", diff)
@@ -496,7 +540,7 @@ func FindUsers(
 			}
 
 			users, _, err := s.FindUsers(ctx, filter)
-			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+			diffInfluxDBErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			if diff := cmp.Diff(users, tt.wants.users, userCmpOptions...); diff != "" {
 				t.Errorf("users are different -got/+want\ndiff %s", diff)
@@ -600,7 +644,7 @@ func DeleteUser(
 			defer done()
 			ctx := context.Background()
 			err := s.DeleteUser(ctx, tt.args.ID)
-			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+			diffInfluxDBErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			filter := influxdb.UserFilter{}
 			users, _, err := s.FindUsers(ctx, filter)
@@ -811,7 +855,7 @@ func FindUser(
 			defer done()
 			ctx := context.Background()
 			user, err := s.FindUser(ctx, tt.args.filter)
-			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+			diffInfluxDBErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			if diff := cmp.Diff(user, tt.wants.user, userCmpOptions...); diff != "" {
 				t.Errorf("users are different -got/+want\ndiff %s", diff)
@@ -974,7 +1018,7 @@ func UpdateUser(
 			}
 
 			user, err := s.UpdateUser(ctx, tt.args.id, upd)
-			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+			diffInfluxDBErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			if diff := cmp.Diff(user, tt.wants.user, userCmpOptions...); diff != "" {
 				t.Errorf("user is different -got/+want\ndiff %s", diff)

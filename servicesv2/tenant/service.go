@@ -1,7 +1,7 @@
 package tenant
 
 import (
-	"github.com/influxdata/influxdb"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 type Service struct {
