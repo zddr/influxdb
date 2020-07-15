@@ -2,43 +2,38 @@ package tenant_test
 
 import (
 	"context"
-	"errors"
-	"io/ioutil"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/go-chi/chi"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/api"
-	"github.com/influxdata/influxdb/servicesv2/bolt"
-	"github.com/influxdata/influxdb/servicesv2/kv"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
 	itesting "github.com/influxdata/influxdb/servicesv2/testing"
 	"go.uber.org/zap/zaptest"
 )
 
-func NewTestBoltStore(t *testing.T) (kv.SchemaStore, func(), error) {
-	f, err := ioutil.TempFile("", "influxdata-bolt-")
-	if err != nil {
-		return nil, nil, errors.New("unable to open temporary boltdb file")
-	}
-	f.Close()
+// func NewTestBoltStore(t *testing.T) (kv.SchemaStore, func(), error) {
+// 	f, err := ioutil.TempFile("", "influxdata-bolt-")
+// 	if err != nil {
+// 		return nil, nil, errors.New("unable to open temporary boltdb file")
+// 	}
+// 	f.Close()
 
-	logger := zaptest.NewLogger(t)
-	path := f.Name()
-	s := bolt.NewKVStore(logger, path)
-	if err := s.Open(context.Background()); err != nil {
-		return nil, nil, err
-	}
+// 	logger := zaptest.NewLogger(t)
+// 	path := f.Name()
+// 	s := bolt.NewKVStore(logger, path)
+// 	if err := s.Open(context.Background()); err != nil {
+// 		return nil, nil, err
+// 	}
 
-	close := func() {
-		s.Close()
-		os.Remove(path)
-	}
+// 	close := func() {
+// 		s.Close()
+// 		os.Remove(path)
+// 	}
 
-	return s, close, nil
-}
+// 	return s, close, nil
+// }
 
 func initHttpOrgService(f itesting.OrganizationFields, t *testing.T) (influxdb.OrganizationService, string, func()) {
 	t.Helper()
@@ -53,7 +48,7 @@ func initHttpOrgService(f itesting.OrganizationFields, t *testing.T) (influxdb.O
 	ctx := context.Background()
 	for _, o := range f.Organizations {
 		if err := svc.CreateOrganization(ctx, o); err != nil {
-			t.Fatalf("failed to populate organizations")
+			t.Fatalf("failed to populate organizations, Err: %v", err)
 		}
 	}
 

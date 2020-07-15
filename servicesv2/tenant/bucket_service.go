@@ -7,6 +7,23 @@ import (
 	"github.com/influxdata/influxdb/servicesv2/kv"
 )
 
+// CreateBucket creates a new bucket and sets b.ID with the new identifier.
+func (s *Service) CreateBucket(ctx context.Context, b *influxdb.Bucket) error {
+	if !b.OrgID.Valid() {
+		// we need a valid org id
+		return ErrOrgNotFound
+	}
+
+	return s.store.Update(ctx, func(tx kv.Tx) error {
+		// make sure the org exists
+		if _, err := s.store.GetOrg(ctx, tx, b.OrgID); err != nil {
+			return err
+		}
+
+		return s.store.CreateBucket(ctx, tx, b)
+	})
+}
+
 // FindBucketByID returns a single bucket by ID.
 func (s *Service) FindBucketByID(ctx context.Context, id influxdb.ID) (*influxdb.Bucket, error) {
 	var bucket *influxdb.Bucket
@@ -159,23 +176,6 @@ func (s *Service) FindBuckets(ctx context.Context, filter influxdb.BucketFilter,
 	}
 
 	return buckets, len(buckets), nil
-}
-
-// CreateBucket creates a new bucket and sets b.ID with the new identifier.
-func (s *Service) CreateBucket(ctx context.Context, b *influxdb.Bucket) error {
-	if !b.OrgID.Valid() {
-		// we need a valid org id
-		return ErrOrgNotFound
-	}
-
-	return s.store.Update(ctx, func(tx kv.Tx) error {
-		// make sure the org exists
-		if _, err := s.store.GetOrg(ctx, tx, b.OrgID); err != nil {
-			return err
-		}
-
-		return s.store.CreateBucket(ctx, tx, b)
-	})
 }
 
 // UpdateBucket updates a single bucket with changeset.
