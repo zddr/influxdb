@@ -13,32 +13,10 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// func NewTestBoltStore(t *testing.T) (kv.SchemaStore, func(), error) {
-// 	f, err := ioutil.TempFile("", "influxdata-bolt-")
-// 	if err != nil {
-// 		return nil, nil, errors.New("unable to open temporary boltdb file")
-// 	}
-// 	f.Close()
-
-// 	logger := zaptest.NewLogger(t)
-// 	path := f.Name()
-// 	s := bolt.NewKVStore(logger, path)
-// 	if err := s.Open(context.Background()); err != nil {
-// 		return nil, nil, err
-// 	}
-
-// 	close := func() {
-// 		s.Close()
-// 		os.Remove(path)
-// 	}
-
-// 	return s, close, nil
-// }
-
 func initHttpOrgService(f itesting.OrganizationFields, t *testing.T) (influxdb.OrganizationService, string, func()) {
 	t.Helper()
 
-	s, stCloser, err := NewTestBoltStore(t)
+	s, stCloser, err := tenant.NewTestBoltStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -301,7 +301,7 @@ func TestBucket(t *testing.T) {
 	}
 	for _, testScenario := range st {
 		t.Run(testScenario.name, func(t *testing.T) {
-			s, closeS, err := NewTestBoltStore(t)
+			s, closeS, err := tenant.NewTestBoltStore(t)
 			if err != nil {
 				t.Fatal(err)
 			}

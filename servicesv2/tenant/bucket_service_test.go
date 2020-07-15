@@ -2,47 +2,20 @@ package tenant_test
 
 import (
 	"context"
-	"errors"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	influxdb "github.com/influxdata/influxdb/servicesv2"
-	"github.com/influxdata/influxdb/servicesv2/bolt"
 	"github.com/influxdata/influxdb/servicesv2/kv"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
 	influxdbtesting "github.com/influxdata/influxdb/servicesv2/testing"
-	"go.uber.org/zap/zaptest"
 )
-
-func NewTestBoltStore(t *testing.T) (kv.SchemaStore, func(), error) {
-	f, err := ioutil.TempFile("", "influxdata-bolt-")
-	if err != nil {
-		return nil, nil, errors.New("unable to open temporary boltdb file")
-	}
-	f.Close()
-
-	logger := zaptest.NewLogger(t)
-	path := f.Name()
-	s := bolt.NewKVStore(logger, path)
-	if err := s.Open(context.Background()); err != nil {
-		return nil, nil, err
-	}
-
-	close := func() {
-		s.Close()
-		os.Remove(path)
-	}
-
-	return s, close, nil
-}
 
 func TestBoltBucketService(t *testing.T) {
 	influxdbtesting.BucketService(initBoltBucketService, t, influxdbtesting.WithoutHooks())
 }
 
 func initBoltBucketService(f influxdbtesting.BucketFields, t *testing.T) (influxdb.BucketService, string, func()) {
-	s, closeBolt, err := NewTestBoltStore(t)
+	s, closeBolt, err := tenant.NewTestBoltStore(t)
 	if err != nil {
 		t.Fatalf("failed to create new kv store: %v", err)
 	}
@@ -80,7 +53,7 @@ func initBucketService(s kv.SchemaStore, f influxdbtesting.BucketFields, t *test
 }
 
 func TestBucketFind(t *testing.T) {
-	s, close, err := NewTestBoltStore(t)
+	s, close, err := tenant.NewTestBoltStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +79,7 @@ func TestBucketFind(t *testing.T) {
 }
 
 func TestSystemBucketsInNameFind(t *testing.T) {
-	s, close, err := NewTestBoltStore(t)
+	s, close, err := tenant.NewTestBoltStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
