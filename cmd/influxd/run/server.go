@@ -381,7 +381,7 @@ func (s *Server) Open() error {
 		return err
 	}
 
-	s.Logger.Info(s.config.V2) // spit out all the config variables
+	s.Logger.Info("v2config", zap.Any("thing", s.config.V2)) // spit out all the config variables
 
 	// Open shared TCP connection.
 	ln, err := net.Listen("tcp", s.BindAddress)
@@ -444,6 +444,17 @@ func (s *Server) Open() error {
 	if err := s.TSDBStore.Open(); err != nil {
 		return fmt.Errorf("open tsdb store: %s", err)
 	}
+
+	// new two.0 api
+	// store := kv.NewStore(config?)
+	// tenant := tenant.NewSystem(store)
+	// v2Api := api.NewAPIHandler(config?)
+	// v2Api.WithResourceHandler(tenant.onboard)
+	// v2Api.WithResourceHandler(tenant.UserStuff)
+	// v2Api.WithResourceHandler(tenant.org)
+
+	// Add v2Api. to services list
+	// open v2Api
 
 	// Open the subscriber service
 	if err := s.Subscriber.Open(); err != nil {
