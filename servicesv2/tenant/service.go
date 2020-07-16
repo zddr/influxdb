@@ -2,6 +2,7 @@ package tenant
 
 import (
 	influxdb "github.com/influxdata/influxdb/servicesv2"
+	"go.uber.org/zap"
 )
 
 type Service struct {
@@ -34,17 +35,17 @@ func NewSystem(store *Store) *TenantSystem {
 	}
 }
 
-func (ts *TenantSystem) NewOrgHTTPHandler() *OrgHandler {
+func (ts *TenantSystem) NewOrgHTTPHandler(log *zap.Logger) *OrgHandler {
 	// secretHandler := secret.NewHandler(log, "id", secret.NewAuthedService(secretSvc))
 	// urmHandler := NewURMHandler(log.With(zap.String("handler", "urm")), influxdb.OrgsResourceType, "id", ts.UserSvc, NewAuthedURMService(ts.OrgSvc, ts.UrmSvc))
 	// labelHandler := label.NewHTTPEmbeddedHandler(log.With(zap.String("handler", "label")), influxdb.OrgsResourceType, labelSvc)
-	return NewHTTPOrgHandler(ts.OrgSvc)
+	return NewHTTPOrgHandler(log, ts.OrgSvc)
 }
 
-func (ts *TenantSystem) NewBucketHTTPHandler() *BucketHandler {
+func (ts *TenantSystem) NewBucketHTTPHandler(log *zap.Logger) *BucketHandler {
 	// urmHandler := NewURMHandler(log.With(zap.String("handler", "urm")), influxdb.OrgsResourceType, "id", ts.UserSvc, NewAuthedURMService(ts.OrgSvc, ts.UrmSvc))
 	// labelHandler := label.NewHTTPEmbeddedHandler(log.With(zap.String("handler", "label")), influxdb.BucketsResourceType, labelSvc)
-	return NewHTTPBucketHandler(ts.BucketSvc)
+	return NewHTTPBucketHandler(log, ts.BucketSvc)
 }
 
 // func (ts *TenantSystem) NewUserHTTPHandler(log *zap.Logger) *UserHandler {

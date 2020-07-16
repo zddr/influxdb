@@ -33,7 +33,7 @@ func initHttpOrgService(f itesting.OrganizationFields, t *testing.T) (influxdb.O
 		}
 	}
 
-	handler := tenant.NewHTTPOrgHandler(zaptest.NewLogger(t), svc, nil, nil, nil)
+	handler := tenant.NewHTTPOrgHandler(zaptest.NewLogger(t), svc)
 	r := chi.NewRouter()
 	r.Mount(handler.Prefix(), handler)
 	server := httptest.NewServer(r)

@@ -1,7 +1,6 @@
 package bolt
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,7 +53,7 @@ func (c *Client) DB() *bolt.DB {
 }
 
 // Open / create boltDB file.
-func (c *Client) Open(ctx context.Context) error {
+func (c *Client) Open() error {
 	// Ensure the required directory structure exists.
 	if err := os.MkdirAll(filepath.Dir(c.Path), 0700); err != nil {
 		return fmt.Errorf("unable to create directory %s: %v", c.Path, err)
@@ -71,7 +70,7 @@ func (c *Client) Open(ctx context.Context) error {
 	}
 	c.db = db
 
-	if err := c.initialize(ctx); err != nil {
+	if err := c.initialize(); err != nil {
 		return err
 	}
 
@@ -80,7 +79,7 @@ func (c *Client) Open(ctx context.Context) error {
 }
 
 // initialize creates Buckets that are missing
-func (c *Client) initialize(ctx context.Context) error {
+func (c *Client) initialize() error {
 	if err := c.db.Update(func(tx *bolt.Tx) error {
 		// Always create ID bucket.
 		// TODO: is this still needed?

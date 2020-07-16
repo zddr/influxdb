@@ -29,9 +29,10 @@ func (h *OrgHandler) Prefix() string {
 }
 
 // NewHTTPOrgHandler constructs a new http server.
-func NewHTTPOrgHandler(orgService influxdb.OrganizationService) *OrgHandler {
+func NewHTTPOrgHandler(log *zap.Logger, orgService influxdb.OrganizationService) *OrgHandler {
 	svr := &OrgHandler{
 		api:    kithttp.NewAPI(),
+		log:    log,
 		orgSvc: orgService,
 	}
 

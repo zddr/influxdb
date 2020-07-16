@@ -365,25 +365,44 @@ func (s *Server) appendUDPService(c udp.Config) {
 
 func (s *Server) appendAPIv2Service(config api.Config) {
 	boltFilePath := config.BoltFile
+	s.Logger.Info(fmt.Sprintf("bolt file path: %s", boltFilePath))
 	bindAddr := config.BindAddr
 
-	//kv disk writing
+	// kv disk writing
+	s.Logger.Info("?????")
+	s.Logger.Info("?????")
+	s.Logger.Info("?????")
+	s.Logger.Info("?????")
+	s.Logger.Info("?????")
+	s.Logger.Info("?????")
 	kvStore := bolt.NewKVStore(s.Logger, boltFilePath)
+	boltClient := bolt.NewClient(s.Logger)
+	boltClient.Path = boltFilePath
+
+	if err := boltClient.Open(); err != nil {
+		s.Logger.Error("Failed opening bolt", zap.Error(err))
+	}
+
+	kvStore.WithDB(boltClient.DB())
+
+	s.Logger.Info(fmt.Sprintf("bolt client db: %+v", boltClient.DB()))
+	s.Logger.Info("?????........")
+	s.Logger.Info("?????........")
+	s.Logger.Info("?????.......")
+	s.Logger.Info("????........?")
+
 	store := tenant.NewStore(kvStore)
 	tenant := tenant.NewSystem(store)
 
-	//OrgHandler
+	// OrgHandler
 	v2Api := api.NewAPIHandler(bindAddr)
-	orgHandler := tenant.NewOrgHTTPHandler()
+	orgHandler := tenant.NewOrgHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(orgHandler)
 
-	//BucketHandler
-	bucketHandler := tenant.NewBucketHTTPHandler()
+	// BucketHandler
+	bucketHandler := tenant.NewBucketHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(bucketHandler)
 
-	// srv := api.NewService(config)
-	// srv.PointsWriter = s.PointsWriter
-	// srv.MetaClient = s.MetaClient
 	s.Services = append(s.Services, v2Api)
 }
 

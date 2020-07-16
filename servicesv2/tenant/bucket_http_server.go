@@ -28,10 +28,10 @@ const (
 )
 
 // NewHTTPBucketHandler constructs a new http server.
-func NewHTTPBucketHandler(bucketSvc influxdb.BucketService) *BucketHandler {
+func NewHTTPBucketHandler(log *zap.Logger, bucketSvc influxdb.BucketService) *BucketHandler {
 	svr := &BucketHandler{
-		api: kithttp.NewAPI(),
-		// log:       log,
+		api:       kithttp.NewAPI(),
+		log:       log,
 		bucketSvc: bucketSvc,
 		// labelSvc:  labelSvc,
 	}
