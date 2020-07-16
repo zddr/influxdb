@@ -363,6 +363,30 @@ func (s *Server) appendUDPService(c udp.Config) {
 	s.Services = append(s.Services, srv)
 }
 
+func (s *Server) appendAPIv2Service(config api.Config) {
+	boltFilePath := config.BoltFile
+	bindAddr := config.BindAddr
+
+	//kv disk writing
+	kvStore := bolt.NewKVStore(s.Logger, boltFilePath)
+	store := tenant.NewStore(kvStore)
+	tenant := tenant.NewSystem(store)
+
+	//OrgHandler
+	v2Api := api.NewAPIHandler(bindAddr)
+	orgHandler := tenant.NewOrgHTTPHandler()
+	v2Api.WithResourceHandler(orgHandler)
+
+	//BucketHandler
+	bucketHandler := tenant.NewBucketHTTPHandler()
+	v2Api.WithResourceHandler(bucketHandler)
+
+	// srv := api.NewService(config)
+	// srv.PointsWriter = s.PointsWriter
+	// srv.MetaClient = s.MetaClient
+	s.Services = append(s.Services, v2Api)
+}
+
 func (s *Server) appendContinuousQueryService(c continuous_querier.Config) {
 	if !c.Enabled {
 		return
@@ -448,16 +472,9 @@ func (s *Server) Open() error {
 		return fmt.Errorf("open tsdb store: %s", err)
 	}
 
-	// new two.0 api
-	path := ""
-	kvStore := bolt.NewKVStore(s.Logger, path)
-	store := tenant.NewStore(kvStore)
-	tenant := tenant.NewSystem(store)
-	orgHandler := tenant.NewOrgHTTPHandler()
-	v2Api := api.NewAPIHandler(path)
-	v2Api.WithResourceHandler(orgHandler)
-	bucketHandler := tenant.NewBucketHTTPHandler()
-	v2Api.WithResourceHandler(bucketHandler)
+	//config
+	config := api.NewConfig()
+	s.appendAPIv2Service(config)
 
 	// Add v2Api. to services list
 	// open v2Api
