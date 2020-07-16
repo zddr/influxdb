@@ -13,6 +13,9 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+//  pushdowngrouprule
+//  pushdownreadtagkeysrule
+//  registerphysicalrules
 func initHttpOrgService(f itesting.OrganizationFields, t *testing.T) (influxdb.OrganizationService, string, func()) {
 	t.Helper()
 

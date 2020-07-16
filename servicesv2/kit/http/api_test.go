@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/influxdb"
-	kithttp "github.com/influxdata/influxdb/kit/transport/http"
 	"github.com/influxdata/influxdb/pkg/testttp"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
+	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

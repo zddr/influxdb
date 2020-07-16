@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/influxdb"
 	"github.com/influxdata/influxdb/http"
-	kithttp "github.com/influxdata/influxdb/kit/transport/http"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
+	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
 )
 
 func TestEncodeError(t *testing.T) {
