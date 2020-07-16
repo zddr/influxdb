@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/user"
 	fp "path/filepath"
 )
 
@@ -13,9 +14,11 @@ type Config struct {
 }
 
 func NewConfig() Config {
+	user, _ := user.Current()
+	boltFile := fp.Join(user.HomeDir, ".influxdbv2/influxd.bolt")
 	return Config{
 		BindAddr: "http://localhost:9999",
-		BoltFile: "$HOME/.influxdbv2/influxdb.bolt",
+		BoltFile: boltFile,
 	}
 }
 
