@@ -368,13 +368,7 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	s.Logger.Info(fmt.Sprintf("bolt file path: %s", boltFilePath))
 	bindAddr := config.BindAddr
 
-	// kv disk writing
-	s.Logger.Info("?????")
-	s.Logger.Info("?????")
-	s.Logger.Info("?????")
-	s.Logger.Info("?????")
-	s.Logger.Info("?????")
-	s.Logger.Info("?????")
+	// set up kv store
 	kvStore := bolt.NewKVStore(s.Logger, boltFilePath)
 	boltClient := bolt.NewClient(s.Logger)
 	boltClient.Path = boltFilePath
@@ -384,18 +378,11 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	}
 
 	kvStore.WithDB(boltClient.DB())
-
-	s.Logger.Info(fmt.Sprintf("bolt client db: %+v", boltClient.DB()))
-	s.Logger.Info("?????........")
-	s.Logger.Info("?????........")
-	s.Logger.Info("?????.......")
-	s.Logger.Info("????........?")
-
 	store := tenant.NewStore(kvStore)
 	tenant := tenant.NewSystem(store)
+	v2Api := api.NewAPIHandler(bindAddr)
 
 	// OrgHandler
-	v2Api := api.NewAPIHandler(bindAddr)
 	orgHandler := tenant.NewOrgHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(orgHandler)
 
