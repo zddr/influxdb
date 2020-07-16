@@ -31,6 +31,9 @@ import (
 	"github.com/influxdata/influxdb/services/storage"
 	"github.com/influxdata/influxdb/services/subscriber"
 	"github.com/influxdata/influxdb/services/udp"
+	"github.com/influxdata/influxdb/servicesv2/api"
+	"github.com/influxdata/influxdb/servicesv2/bolt"
+	"github.com/influxdata/influxdb/servicesv2/tenant"
 	"github.com/influxdata/influxdb/storage/reads"
 	"github.com/influxdata/influxdb/tcp"
 	"github.com/influxdata/influxdb/tsdb"
@@ -446,12 +449,15 @@ func (s *Server) Open() error {
 	}
 
 	// new two.0 api
-	// store := kv.NewStore(config?)
-	// tenant := tenant.NewSystem(store)
-	// v2Api := api.NewAPIHandler(config?)
-	// v2Api.WithResourceHandler(tenant.onboard)
-	// v2Api.WithResourceHandler(tenant.UserStuff)
-	// v2Api.WithResourceHandler(tenant.org)
+	path := ""
+	kvStore := bolt.NewKVStore(s.Logger, path)
+	store := tenant.NewStore(kvStore)
+	tenant := tenant.NewSystem(store)
+	orgHandler := tenant.NewOrgHTTPHandler()
+	v2Api := api.NewAPIHandler(path)
+	v2Api.WithResourceHandler(orgHandler)
+	bucketHandler := tenant.NewBucketHTTPHandler()
+	v2Api.WithResourceHandler(bucketHandler)
 
 	// Add v2Api. to services list
 	// open v2Api
