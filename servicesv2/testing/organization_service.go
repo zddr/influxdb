@@ -69,30 +69,7 @@ func ErrorsEqual(t *testing.T, actual, expected error) {
 	}
 }
 
-type MockIDGenerator struct {
-	Last  *influxdb.ID
-	Count int
-}
-
-const FirstMockID int = 65536
-
-func NewMockIDGenerator() *MockIDGenerator {
-	return &MockIDGenerator{
-		Count: FirstMockID,
-	}
-}
-
 var orgBucketsIDGenerator = NewMockIDGenerator()
-
-// TimeGenerator stores a fake value of time.
-type TimeGenerator struct {
-	FakeValue time.Time
-}
-
-// Now will return the FakeValue stored in the struct.
-func (g TimeGenerator) Now() time.Time {
-	return g.FakeValue
-}
 
 var organizationCmpOptions = cmp.Options{
 	cmp.Comparer(func(x, y []byte) bool {

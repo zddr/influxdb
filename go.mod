@@ -17,6 +17,7 @@ require (
 	github.com/go-stack/stack v1.8.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/snappy v0.0.1
+	github.com/google/btree v1.0.0
 	github.com/google/go-cmp v0.5.0
 	github.com/influxdata/flux v0.65.0
 	github.com/influxdata/httprouter v1.3.1-0.20191122104820-ee83e2772f69

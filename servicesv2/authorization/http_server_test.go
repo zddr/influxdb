@@ -1,4 +1,4 @@
-package authorization_test
+package authorization
 
 import (
 	"bytes"
@@ -17,9 +17,54 @@ import (
 	"github.com/influxdata/httprouter"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	icontext "github.com/influxdata/influxdb/servicesv2/context"
+	"github.com/influxdata/influxdb/servicesv2/inmem"
+	"github.com/influxdata/influxdb/servicesv2/kv"
 	itesting "github.com/influxdata/influxdb/servicesv2/testing"
 	"go.uber.org/zap/zaptest"
 )
+
+var (
+	authorizationBucket = []byte("authorizationsv1")
+	bucketBucket        = []byte("bucketsv1")
+	bucketIndex         = []byte("bucketindexv1")
+	organizationBucket  = []byte("organizationsv1")
+	organizationIndex   = []byte("organizationindexv1")
+	userBucket          = []byte("usersv1")
+	userpasswordBucket  = []byte("userspasswordv1")
+	userIndex           = []byte("userindexv1")
+	urmBucket           = []byte("userresourcemappingsv1")
+	urmByUserIndex      = []byte("userresourcemappingsbyuserindexv1")
+)
+
+func NewTestInmemStore(t *testing.T) (kv.Store, func(), error) {
+	t.Helper()
+
+	store := inmem.NewKVStore()
+
+	buckets := [][]byte{
+		authIndex,
+		authorizationBucket,
+		userBucket,
+		userpasswordBucket,
+		userIndex,
+		urmBucket,
+		organizationBucket,
+		organizationIndex,
+		bucketBucket,
+		bucketIndex,
+		urmByUserIndex,
+	}
+
+	var err error
+	for _, b := range buckets {
+		err = store.CreateBucket(context.Background(), b)
+		if err != nil {
+			t.Fatalf("Cannot create bucket: %v", err)
+		}
+	}
+
+	return store, func() {}, nil
+}
 
 func TestService_handlePostAuthorization(t *testing.T) {
 	type fields struct {
@@ -143,7 +188,7 @@ func TestService_handlePostAuthorization(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Helper()
 
-			s, _, err := NewTestBoltStore(t)
+			s, _, err := NewTestInmemStore(t)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -669,7 +714,7 @@ func TestService_handleGetAuthorizations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Helper()
 
-			s, _, err := NewTestBoltStore(t)
+			s, _, err := NewTestInmemStore(t)
 			if err != nil {
 				t.Fatal(err)
 			}

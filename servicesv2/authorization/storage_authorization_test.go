@@ -8,7 +8,6 @@ import (
 
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/authorization"
-	"github.com/influxdata/influxdb/servicesv2/bolt"
 	"github.com/influxdata/influxdb/servicesv2/kv"
 )
 
@@ -172,10 +171,7 @@ func TestAuth(t *testing.T) {
 
 	for _, testScenario := range tt {
 		t.Run(testScenario.name, func(t *testing.T) {
-			store := bolt.NewKVStore()
-			// if err := all.Up(context.Background(), zaptest.NewLogger(t), store); err != nil {
-			// 	t.Fatal(err)
-			// }
+			store, _, _ := NewTestBoltStore(t)
 
 			ts, err := authorization.NewStore(store)
 			if err != nil {
