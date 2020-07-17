@@ -2,6 +2,7 @@ package tenant
 
 import (
 	"context"
+	"fmt"
 	"path"
 
 	influxdb "github.com/influxdata/influxdb/servicesv2"
@@ -37,6 +38,7 @@ func (s *OnboardClientService) OnboardInitialUser(ctx context.Context, or *influ
 		Do(ctx)
 
 	if err != nil {
+		fmt.Println("Err: ", err)
 		return nil, err
 	}
 

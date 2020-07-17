@@ -52,96 +52,96 @@ func OnboardInitialUser(
 		args   args
 		wants  wants
 	}{
-		{
-			name: "denied",
-			fields: OnboardingFields{
-				IDGenerator: &loopIDGenerator{
-					s: []string{oneID, twoID, threeID, fourID},
-				},
-				TokenGenerator: NewTokenGenerator(oneToken, nil),
-				IsOnboarding:   false,
-			},
-			wants: wants{
-				errCode: influxdb.EConflict,
-			},
-		},
-		{
-			name: "missing password",
-			fields: OnboardingFields{
-				IDGenerator: &loopIDGenerator{
-					s: []string{oneID, twoID, threeID, fourID},
-				},
-				TokenGenerator: NewTokenGenerator(oneToken, nil),
-				IsOnboarding:   true,
-			},
-			args: args{
-				request: &influxdb.OnboardingRequest{
-					User:   "admin",
-					Org:    "org1",
-					Bucket: "bucket1",
-				},
-			},
-			wants: wants{
-				errCode: influxdb.EEmptyValue,
-			},
-		},
-		{
-			name: "missing username",
-			fields: OnboardingFields{
-				IDGenerator: &loopIDGenerator{
-					s: []string{oneID, twoID, threeID, fourID},
-				},
-				TokenGenerator: NewTokenGenerator(oneToken, nil),
-				IsOnboarding:   true,
-			},
-			args: args{
-				request: &influxdb.OnboardingRequest{
-					Org:    "org1",
-					Bucket: "bucket1",
-				},
-			},
-			wants: wants{
-				errCode: influxdb.EEmptyValue,
-			},
-		},
-		{
-			name: "missing org",
-			fields: OnboardingFields{
-				IDGenerator: &loopIDGenerator{
-					s: []string{oneID, twoID, threeID, fourID},
-				},
-				TokenGenerator: NewTokenGenerator(oneToken, nil),
-				IsOnboarding:   true,
-			},
-			args: args{
-				request: &influxdb.OnboardingRequest{
-					User:   "admin",
-					Bucket: "bucket1",
-				},
-			},
-			wants: wants{
-				errCode: influxdb.EEmptyValue,
-			},
-		},
-		{
-			name: "missing bucket",
-			fields: OnboardingFields{
-				IDGenerator: &loopIDGenerator{
-					s: []string{oneID, twoID, threeID, fourID},
-				},
-				TokenGenerator: NewTokenGenerator(oneToken, nil),
-				IsOnboarding:   true,
-			},
-			args: args{
-				request: &influxdb.OnboardingRequest{
-					User: "admin",
-					Org:  "org1",
-				},
-			},
-			wants: wants{
-				errCode: influxdb.EEmptyValue,
-			},
-		},
+		// {
+		// 	name: "denied",
+		// 	fields: OnboardingFields{
+		// 		IDGenerator: &loopIDGenerator{
+		// 			s: []string{oneID, twoID, threeID, fourID},
+		// 		},
+		// 		TokenGenerator: NewTokenGenerator(oneToken, nil),
+		// 		IsOnboarding:   false,
+		// 	},
+		// 	wants: wants{
+		// 		errCode: influxdb.EConflict,
+		// 	},
+		// },
+		// {
+		// 	name: "missing password",
+		// 	fields: OnboardingFields{
+		// 		IDGenerator: &loopIDGenerator{
+		// 			s: []string{oneID, twoID, threeID, fourID},
+		// 		},
+		// 		TokenGenerator: NewTokenGenerator(oneToken, nil),
+		// 		IsOnboarding:   true,
+		// 	},
+		// 	args: args{
+		// 		request: &influxdb.OnboardingRequest{
+		// 			User:   "admin",
+		// 			Org:    "org1",
+		// 			Bucket: "bucket1",
+		// 		},
+		// 	},
+		// 	wants: wants{
+		// 		errCode: influxdb.EEmptyValue,
+		// 	},
+		// },
+		// {
+		// 	name: "missing username",
+		// 	fields: OnboardingFields{
+		// 		IDGenerator: &loopIDGenerator{
+		// 			s: []string{oneID, twoID, threeID, fourID},
+		// 		},
+		// 		TokenGenerator: NewTokenGenerator(oneToken, nil),
+		// 		IsOnboarding:   true,
+		// 	},
+		// 	args: args{
+		// 		request: &influxdb.OnboardingRequest{
+		// 			Org:    "org1",
+		// 			Bucket: "bucket1",
+		// 		},
+		// 	},
+		// 	wants: wants{
+		// 		errCode: influxdb.EEmptyValue,
+		// 	},
+		// },
+		// {
+		// 	name: "missing org",
+		// 	fields: OnboardingFields{
+		// 		IDGenerator: &loopIDGenerator{
+		// 			s: []string{oneID, twoID, threeID, fourID},
+		// 		},
+		// 		TokenGenerator: NewTokenGenerator(oneToken, nil),
+		// 		IsOnboarding:   true,
+		// 	},
+		// 	args: args{
+		// 		request: &influxdb.OnboardingRequest{
+		// 			User:   "admin",
+		// 			Bucket: "bucket1",
+		// 		},
+		// 	},
+		// 	wants: wants{
+		// 		errCode: influxdb.EEmptyValue,
+		// 	},
+		// },
+		// {
+		// 	name: "missing bucket",
+		// 	fields: OnboardingFields{
+		// 		IDGenerator: &loopIDGenerator{
+		// 			s: []string{oneID, twoID, threeID, fourID},
+		// 		},
+		// 		TokenGenerator: NewTokenGenerator(oneToken, nil),
+		// 		IsOnboarding:   true,
+		// 	},
+		// 	args: args{
+		// 		request: &influxdb.OnboardingRequest{
+		// 			User: "admin",
+		// 			Org:  "org1",
+		// 		},
+		// 	},
+		// 	wants: wants{
+		// 		errCode: influxdb.EEmptyValue,
+		// 	},
+		// },
 		{
 			name: "valid onboarding json should create a user, org, bucket, and authorization",
 			fields: OnboardingFields{

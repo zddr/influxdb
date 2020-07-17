@@ -75,7 +75,7 @@ func (h *OnboardHandler) handleIsOnboarding(w http.ResponseWriter, r *http.Reque
 
 // handleInitialOnboardRequest is the HTTP handler for the GET /api/v2/setup route.
 func (h *OnboardHandler) handleInitialOnboardRequest(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx := r.Context() // bookmark (al)
 	req, err := decodeOnboardRequest(ctx, r)
 	if err != nil {
 		h.api.Err(w, r, err)

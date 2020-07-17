@@ -299,6 +299,11 @@ func NewTestBoltStore(t *testing.T) (kv.SchemaStore, func(), error) {
 	}
 	f.Close()
 
+	var (
+		authBucket = []byte("authorizationsv1")
+		authIndex  = []byte("authorizationindexv1")
+	)
+
 	logger := zaptest.NewLogger(t)
 	path := f.Name()
 	s := bolt.NewKVStore(logger, path)
@@ -312,6 +317,8 @@ func NewTestBoltStore(t *testing.T) (kv.SchemaStore, func(), error) {
 		urmBucket,
 		organizationBucket,
 		organizationIndex,
+		authIndex,
+		authBucket,
 		bucketBucket,
 		bucketIndex,
 		urmByUserIndex,

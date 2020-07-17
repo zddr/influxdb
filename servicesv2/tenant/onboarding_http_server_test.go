@@ -23,10 +23,10 @@ func initOnboardHttpService(f itesting.OnboardingFields, t *testing.T) (influxdb
 	}
 
 	storage := tenant.NewStore(s)
-
-	authsvc := authorization.NewMockAuthorizationService()
-
 	ten := tenant.NewService(storage)
+
+	authStore, _ := authorization.NewStore(s)
+	authsvc := authorization.NewService(authStore, ten)
 
 	svc := tenant.NewOnboardService(storage, authsvc)
 

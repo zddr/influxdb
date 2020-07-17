@@ -2,6 +2,7 @@ package authorization
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	influxdb "github.com/influxdata/influxdb/servicesv2"
@@ -32,6 +33,7 @@ func (s *Service) CreateAuthorization(ctx context.Context, a *influxdb.Authoriza
 		}
 	}
 
+	fmt.Println("creating ")
 	if _, err := s.tenantService.FindUserByID(ctx, a.UserID); err != nil {
 		return influxdb.ErrUnableToCreateToken
 	}
@@ -42,8 +44,10 @@ func (s *Service) CreateAuthorization(ctx context.Context, a *influxdb.Authoriza
 
 	err := s.store.View(ctx, func(tx kv.Tx) error {
 		if err := s.store.uniqueAuthToken(ctx, tx, a); err != nil {
+			fmt.Println("unique 1, ", err)
 			return err
 		}
+		fmt.Println("unique 2")
 		return nil
 	})
 	if err != nil {
