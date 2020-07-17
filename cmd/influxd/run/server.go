@@ -479,8 +479,7 @@ func (s *Server) Open() error {
 	}
 
 	//config
-	config := api.NewConfig()
-	s.appendAPIv2Service(config)
+	s.appendAPIv2Service(s.config.V2)
 
 	// Add v2Api. to services list
 	// open v2Api
