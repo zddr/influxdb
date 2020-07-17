@@ -414,7 +414,7 @@ func (s *Server) Open() error {
 		return err
 	}
 
-	s.Logger.Info("v2config", zap.Any("thing", s.config.V2)) // spit out all the config variables
+	s.Logger.Info("v2config", zap.Any("config", s.config.V2)) // spit out all the config variables
 
 	// Open shared TCP connection.
 	ln, err := net.Listen("tcp", s.BindAddress)
