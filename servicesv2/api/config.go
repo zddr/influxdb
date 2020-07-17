@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	BindAddr string `toml:"bind_addr"`
-	BoltFile string
+	BindAddr string `toml:"v2-bind-addr"`
+	BoltFile string `toml:"v2-bolt-file"`
 }
 
 func NewConfig() Config {
