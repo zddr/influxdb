@@ -171,7 +171,7 @@ func TestAuth(t *testing.T) {
 
 	for _, testScenario := range tt {
 		t.Run(testScenario.name, func(t *testing.T) {
-			store, _, _ := NewTestBoltStore(t)
+			store, _, _ := authorization.NewTestInmemStore(t)
 
 			ts, err := authorization.NewStore(store)
 			if err != nil {
