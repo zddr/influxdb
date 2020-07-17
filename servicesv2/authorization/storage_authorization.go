@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/buger/jsonparser"	
+	"github.com/buger/jsonparser"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/kv"
 )
@@ -401,7 +401,7 @@ func authorizationsPredicateFn(f influxdb.AuthorizationFilter) kv.CursorPredicat
 		prevFn := pred
 		pred = func(key, value []byte) bool {
 			prev := prevFn == nil || prevFn(key, value)
-			got, exists, err := jsonp.GetOptionalID(value, "userID")
+			got, exists, err := GetOptionalID(value, "userID")
 			return prev && ((exp == got && exists) || err != nil)
 		}
 	}
@@ -459,4 +459,26 @@ func GetID(data []byte, keys ...string) (val influxdb.ID, err error) {
 	}
 
 	return id, nil
+}
+
+// GetOptionalID returns an influxdb.ID for the specified keys path or an error if
+// the value cannot be decoded. The value of exists will be false if the keys path
+// does not exist.
+func GetOptionalID(data []byte, keys ...string) (val influxdb.ID, exists bool, err error) {
+	v, typ, _, err := jsonparser.Get(data, keys...)
+	if typ == jsonparser.NotExist {
+		return 0, false, nil
+	}
+
+	if err != nil {
+		return 0, false, err
+	}
+
+	var id influxdb.ID
+	err = id.Decode(v)
+	if err != nil {
+		return 0, false, err
+	}
+
+	return id, true, nil
 }

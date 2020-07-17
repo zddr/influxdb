@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	influxdb "github.com/influxdata/influxdb/servicesv2"
-	"github.com/influxdata/influxdb/servicesv2/pkg/httpc"
+	"github.com/influxdata/influxdb/servicesv2/httpc"
 )
 
 var _ influxdb.AuthorizationService = (*AuthorizationClientService)(nil)

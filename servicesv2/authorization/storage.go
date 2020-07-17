@@ -4,7 +4,6 @@ import (
 	"context"
 
 	influxdb "github.com/influxdata/influxdb/servicesv2"
-	"github.com/influxdata/influxdb/servicesv2/kit/tracing"
 	"github.com/influxdata/influxdb/servicesv2/kv"
 	"github.com/influxdata/influxdb/servicesv2/snowflake"
 )
@@ -81,9 +80,6 @@ func (s *Store) generateSafeID(ctx context.Context, tx kv.Tx, bucket []byte) (in
 }
 
 func (s *Store) uniqueID(ctx context.Context, tx kv.Tx, bucket []byte, id influxdb.ID) error {
-	span, _ := tracing.StartSpanFromContext(ctx)
-	defer span.Finish()
-
 	encodedID, err := id.Encode()
 	if err != nil {
 		return &influxdb.Error{
