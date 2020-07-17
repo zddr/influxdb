@@ -14,13 +14,6 @@ import (
 const (
 	orgOneID = "020f755c3c083000"
 	orgTwoID = "020f755c3c083001"
-
-	oneID   = "020f755c3c082000"
-	twoID   = "020f755c3c082001"
-	threeID = "020f755c3c082002"
-	fourID  = "020f755c3c082003"
-	fiveID  = "020f755c3c082004"
-	sixID   = "020f755c3c082005"
 )
 
 // MustIDBase16 is an helper to ensure a correct ID is built during testing.
