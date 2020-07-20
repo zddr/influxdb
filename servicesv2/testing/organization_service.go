@@ -9,12 +9,19 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
+	platform "github.com/influxdata/influxdb/servicesv2"
 )
 
 const (
 	orgOneID = "020f755c3c083000"
 	orgTwoID = "020f755c3c083001"
 )
+
+// MustIDBase16Ptr is an helper to ensure a correct ID ptr ref is built during testing.
+func MustIDBase16Ptr(s string) *platform.ID {
+	id := MustIDBase16(s)
+	return &id
+}
 
 // MustIDBase16 is an helper to ensure a correct ID is built during testing.
 func MustIDBase16(s string) influxdb.ID {
@@ -25,11 +32,11 @@ func MustIDBase16(s string) influxdb.ID {
 	return *id
 }
 
-func strPtr(s string) *string {
-	ss := new(string)
-	*ss = s
-	return ss
-}
+// func strPtr(s string) *string {  //NOTE: similar probably the same implementation in dbrp_mapping.go
+// 	ss := new(string)
+// 	*ss = s
+// 	return ss
+// }
 
 func diffInfluxDBErrors(name string, actual, expected error, opPrefix string, t *testing.T) {
 	t.Helper()
