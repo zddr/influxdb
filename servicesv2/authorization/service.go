@@ -33,7 +33,6 @@ func (s *Service) CreateAuthorization(ctx context.Context, a *influxdb.Authoriza
 		}
 	}
 
-	fmt.Println("creating ")
 	if _, err := s.tenantService.FindUserByID(ctx, a.UserID); err != nil {
 		return influxdb.ErrUnableToCreateToken
 	}

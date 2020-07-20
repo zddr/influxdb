@@ -22,6 +22,7 @@ type TenantSystem struct {
 	// 	UrmSvc      influxdb.UserResourceMappingService
 	OrgSvc    influxdb.OrganizationService
 	BucketSvc influxdb.BucketService
+	TenantSvc influxdb.TenantService
 }
 
 func NewSystem(store *Store) *TenantSystem {
@@ -32,6 +33,7 @@ func NewSystem(store *Store) *TenantSystem {
 		// 		UrmSvc:      NewURMLogger(log, NewUrmMetrics(reg, ts, metricOpts...)),
 		OrgSvc:    ts,
 		BucketSvc: ts,
+		TenantSvc: ts,
 	}
 }
 
