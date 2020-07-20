@@ -379,6 +379,8 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	}
 	kvStore.WithDB(boltClient.DB())
 
+	v2Api := api.NewAPIHandler(bindAddr)
+
 	// set up tenant and auth services
 	store := tenant.NewStore(kvStore)
 	ts := tenant.NewSystem(store)
@@ -388,15 +390,15 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 		return
 	}
 	authSvc := authv2.NewService(authStore, ts.TenantSvc)
-	v2Api := api.NewAPIHandler(bindAddr)
+	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authSvc, ts.TenantSvc)
+	v2Api.WithResourceHandler(authHandler)
 
 	// OrgHandler
-	orgHandler := tenant.NewOrgHTTPHandler(s.Logger)
-	orgHandler = tenant.NewAuthedOrgService(authSvc)
+	orgHandler := ts.NewOrgHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(orgHandler)
 
 	// BucketHandler
-	bucketHandler := tenant.NewBucketHTTPHandler(s.Logger)
+	bucketHandler := ts.NewBucketHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(bucketHandler)
 
 	s.Services = append(s.Services, v2Api)
