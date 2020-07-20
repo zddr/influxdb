@@ -19,5 +19,5 @@ type ShardGroupService interface {
 
 	FindShardGroups(ctx context.Context, filter FindShardFilter) ([]meta.ShardGroupInfo, error)
 
-	DeleteShardGroup(ctx context.Context, id uint64) error
+	DeleteShardGroup(ctx context.Context, bucketID, id ID) error
 }
