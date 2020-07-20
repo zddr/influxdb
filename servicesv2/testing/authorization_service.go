@@ -10,7 +10,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
-	// "github.com/influxdata/influxdb/v2/mock"
 )
 
 // IDPtr returns a pointer to an influxdb.ID.

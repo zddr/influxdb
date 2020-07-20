@@ -31,6 +31,7 @@ import (
 	"github.com/influxdata/influxdb/services/storage"
 	"github.com/influxdata/influxdb/services/subscriber"
 	"github.com/influxdata/influxdb/services/udp"
+	influxv2 "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/api"
 	"github.com/influxdata/influxdb/servicesv2/bolt"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
@@ -376,6 +377,9 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	if err := boltClient.Open(); err != nil {
 		s.Logger.Error("Failed opening bolt", zap.Error(err))
 	}
+
+	// Authorization Service
+	authSvc := influxv2.NewAuthorizationService(kvStore)
 
 	kvStore.WithDB(boltClient.DB())
 	store := tenant.NewStore(kvStore)
