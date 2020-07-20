@@ -32,6 +32,7 @@ import (
 	"github.com/influxdata/influxdb/services/subscriber"
 	"github.com/influxdata/influxdb/services/udp"
 	"github.com/influxdata/influxdb/servicesv2/api"
+	authv2 "github.com/influxdata/influxdb/servicesv2/authorization"
 	"github.com/influxdata/influxdb/servicesv2/bolt"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
 	"github.com/influxdata/influxdb/storage/reads"
@@ -372,22 +373,32 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	kvStore := bolt.NewKVStore(s.Logger, boltFilePath)
 	boltClient := bolt.NewClient(s.Logger)
 	boltClient.Path = boltFilePath
-
 	if err := boltClient.Open(); err != nil {
 		s.Logger.Error("Failed opening bolt", zap.Error(err))
+		return
 	}
-
 	kvStore.WithDB(boltClient.DB())
-	store := tenant.NewStore(kvStore)
-	tenant := tenant.NewSystem(store)
+
 	v2Api := api.NewAPIHandler(bindAddr)
 
+	// set up tenant and auth services
+	store := tenant.NewStore(kvStore)
+	ts := tenant.NewSystem(store)
+	authStore, err := authv2.NewStore(kvStore)
+	if err != nil {
+		s.Logger.Error("Failed creating new authorization store", zap.Error(err))
+		return
+	}
+	authSvc := authv2.NewService(authStore, ts.TenantSvc)
+	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authSvc, ts.TenantSvc)
+	v2Api.WithResourceHandler(authHandler)
+
 	// OrgHandler
-	orgHandler := tenant.NewOrgHTTPHandler(s.Logger)
+	orgHandler := ts.NewOrgHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(orgHandler)
 
 	// BucketHandler
-	bucketHandler := tenant.NewBucketHTTPHandler(s.Logger)
+	bucketHandler := ts.NewBucketHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(bucketHandler)
 
 	s.Services = append(s.Services, v2Api)

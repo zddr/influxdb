@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/influxdata/influxdb/servicesv2"
-	// "github.com/influxdata/influxdb/v2/kit/tracing"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/httpc"
 )
 
