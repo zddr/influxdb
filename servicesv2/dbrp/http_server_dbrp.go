@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	PrefixDBRP = "/api/v2/dbrps"
+	prefixDBRP = "/api/v2/dbrps"
 )
 
 type Handler struct {
@@ -22,6 +22,10 @@ type Handler struct {
 	log     *zap.Logger
 	dbrpSvc influxdb.DBRPMappingServiceV2
 	orgSvc  influxdb.OrganizationService
+}
+
+func (h *Handler) Prefix() string {
+	return prefixDBRP
 }
 
 // NewHTTPHandler constructs a new http server.

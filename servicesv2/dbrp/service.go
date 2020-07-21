@@ -63,7 +63,7 @@ func composeForeignKey(orgID influxdb.ID, db string) []byte {
 	return key
 }
 
-func NewService(ctx context.Context, bucketSvc influxdb.BucketService, st kv.Store) influxdb.DBRPMappingServiceV2 {
+func NewService(bucketSvc influxdb.BucketService, st kv.Store) influxdb.DBRPMappingServiceV2 {
 	return &Service{
 		store:     st,
 		IDGen:     snowflake.NewDefaultIDGenerator(),

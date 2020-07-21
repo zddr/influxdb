@@ -21,7 +21,7 @@ type Client struct {
 func NewClient(client *httpc.Client) *Client {
 	return &Client{
 		Client: client,
-		Prefix: PrefixDBRP,
+		Prefix: prefixDBRP,
 	}
 }
 
