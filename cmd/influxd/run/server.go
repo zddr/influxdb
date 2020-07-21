@@ -393,6 +393,50 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authSvc, ts.TenantSvc)
 	v2Api.WithResourceHandler(authHandler)
 
+	//set up DBRP mapping service
+	/*orgSvc := &influxdb.OrganizationService{
+		FindOrganizationF: func(ctx context.Context, filter influxdb.OrganizationFilter) (*influxdb.Organization, error) {
+			return &influxdb.Organization{
+				ID:   *filter.ID,
+				Name: "org",
+			}, nil
+		},
+	}
+	dbrpSvc := &influxdb.DBRPMappingServiceV2{
+		CreateFn: func(ctx context.Context, dbrp *influxdb.DBRPMappingV2) error {
+			dbrp.ID = 1
+			return nil
+		},
+		FindByIDFn: func(ctx context.Context, orgID, id influxdb.ID) (*influxdb.DBRPMappingV2, error) {
+			return &influxdb.DBRPMappingV2{
+				ID:              id,
+				Database:        "db",
+				RetentionPolicy: "rp",
+				Default:         false,
+				OrganizationID:  id,
+				BucketID:        1,
+			}, nil
+		},
+		FindManyFn: func(ctx context.Context, dbrp influxdb.DBRPMappingFilterV2, opts ...influxdb.FindOptions) ([]*influxdb.DBRPMappingV2, int, error) {
+			return []*influxdb.DBRPMappingV2{}, 0, nil
+		},
+	}
+	/*BucketSvc := nil
+	if BucketSvc == nil {
+		BucketSvc = &influxdb.BucketService{
+			FindBucketByIDFn: func(ctx context.Context, id influxdb.ID) (*influxdb.Bucket, error) {
+				// always find a bucket.
+				return &influxdb.Bucket{
+					ID:   id,
+					Name: fmt.Sprintf("bucket-%v", id),
+				}, nil
+			},
+		}
+	}
+	dbrpSvc := dbrp.NewService(context.Background(), BucketSvc, kvStore)
+	dbrpHandler := dbrp.NewHTTPHandler(s.Logger, dbrpSvc, orgSvc)
+	v2APi.WithResourceHandler(dbrpHandler) */
+
 	// OrgHandler
 	orgHandler := ts.NewOrgHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(orgHandler)
