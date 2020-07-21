@@ -35,6 +35,8 @@ import (
 	authv2 "github.com/influxdata/influxdb/servicesv2/authorization"
 	"github.com/influxdata/influxdb/servicesv2/bolt"
 	"github.com/influxdata/influxdb/servicesv2/dbrp"
+	ihttp "github.com/influxdata/influxdb/servicesv2/http"
+	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
 	"github.com/influxdata/influxdb/storage/reads"
 	"github.com/influxdata/influxdb/tcp"
@@ -380,8 +382,6 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	}
 	kvStore.WithDB(boltClient.DB())
 
-	v2Api := api.NewAPIHandler(bindAddr)
-
 	// set up tenant and auth services
 	store := tenant.NewStore(kvStore)
 	ts := tenant.NewSystem(store)
@@ -393,6 +393,17 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	authSvc := authv2.NewService(authStore, ts.TenantSvc)
 	authSvc = authv2.NewAuthedAuthorizationService(authSvc, ts.TenantSvc)
 	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authSvc, ts.TenantSvc)
+
+	h := ihttp.NewAuthenticationHandler(s.Logger, kithttp.ErrorHandler(0), &authSvc, &ts.UserSvc)
+	h.RegisterNoAuthRoute("GET", "/api/v2")
+	h.RegisterNoAuthRoute("POST", "/api/v2/signin")
+	h.RegisterNoAuthRoute("POST", "/api/v2/signout")
+	h.RegisterNoAuthRoute("POST", "/api/v2/setup")
+	h.RegisterNoAuthRoute("POST", "/api/v2/setup")
+	h.RegisterNoAuthRoute("GET", "/api/v2/setup")
+	// h.RegisterNoAuthRoute("GET", "/api/v2/swagger.json")
+
+	v2Api := api.NewAPIHandler(bindAddr, ihttp.AuthMiddleware(h))
 	v2Api.WithResourceHandler(authHandler)
 
 	//set up DBRP mapping service
