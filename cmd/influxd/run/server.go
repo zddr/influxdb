@@ -391,6 +391,7 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 		return
 	}
 	authSvc := authv2.NewService(authStore, ts.TenantSvc)
+	authSvc = authv2.NewAuthedAuthorizationService(authSvc, ts.TenantSvc)
 	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authSvc, ts.TenantSvc)
 	v2Api.WithResourceHandler(authHandler)
 
