@@ -15,6 +15,7 @@ import (
 
 var (
 	authorizationBucket = []byte("authorizationsv1")
+	authIndex           = []byte("authorizationindexv1")
 	bucketBucket        = []byte("bucketsv1")
 	organizationBucket  = []byte("organizationsv1")
 	userBucket          = []byte("usersv1")
@@ -89,6 +90,7 @@ func (c *Client) initialize() error {
 		// TODO: make card to normalize everything under kv?
 		bkts := [][]byte{
 			authorizationBucket,
+			authIndex,
 			bucketBucket, //bolt bucket of TS buckets
 			organizationBucket,
 			userBucket,
