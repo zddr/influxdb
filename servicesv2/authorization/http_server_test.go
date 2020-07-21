@@ -47,11 +47,11 @@ func NewTestInmemStore(t *testing.T) (kv.Store, func(), error) {
 		userBucket,
 		userpasswordBucket,
 		userIndex,
-		urmBucket,
 		organizationBucket,
 		organizationIndex,
 		bucketBucket,
 		bucketIndex,
+		urmBucket,
 		urmByUserIndex,
 	}
 
