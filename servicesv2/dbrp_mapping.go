@@ -146,21 +146,6 @@ func (f DBRPMappingFilterV2) String() string {
 	return s.String()
 }
 
-// // DBRPMappingService provides a mapping of cluster, database and retention policy to an organization ID and bucket ID.
-// type DBRPMappingService interface {
-// 	// FindBy returns the dbrp mapping the for cluster, db and rp.
-// 	FindBy(ctx context.Context, cluster, db, rp string) (*DBRPMapping, error)
-// 	// Find returns the first dbrp mapping the matches the filter.
-// 	Find(ctx context.Context, filter DBRPMappingFilter) (*DBRPMapping, error)
-// 	// FindMany returns a list of dbrp mappings that match filter and the total count of matching dbrp mappings.
-// 	FindMany(ctx context.Context, filter DBRPMappingFilter, opt ...FindOptions) ([]*DBRPMapping, int, error)
-// 	// Create creates a new dbrp mapping, if a different mapping exists an error is returned.
-// 	Create(ctx context.Context, dbrpMap *DBRPMapping) error
-// 	// Delete removes a dbrp mapping.
-// 	// Deleting a mapping that does not exists is not an error.
-// 	Delete(ctx context.Context, cluster, db, rp string) error
-// }
-
 // DBRPMapping represents a mapping of a cluster, database and retention policy to an organization ID and bucket ID.
 type DBRPMapping struct {
 	Cluster         string `json:"cluster"`
