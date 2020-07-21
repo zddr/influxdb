@@ -407,6 +407,17 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	bucketHandler := ts.NewBucketHTTPHandler(s.Logger)
 	v2Api.WithResourceHandler(bucketHandler)
 
+	// User Resource Handlers
+	userHandler := ts.NewUserHTTPHandler(s.Logger)
+	v2Api.WithResourceHandler(userHandler.MeResourceHandler())
+	v2Api.WithResourceHandler(userHandler.UserResourceHandler())
+
+	// Onboarding
+	onboardSvc := tenant.NewOnboardService(store, authSvc)
+	onboardSvc = tenant.NewAuthedOnboardSvc(onboardSvc)
+	onboardHandler := tenant.NewHTTPOnboardHandler(s.Logger, onboardSvc)
+	v2Api.WithResourceHandler(onboardHandler)
+
 	s.Services = append(s.Services, v2Api)
 }
 
