@@ -399,7 +399,6 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	h.RegisterNoAuthRoute("POST", "/api/v2/signin")
 	h.RegisterNoAuthRoute("POST", "/api/v2/signout")
 	h.RegisterNoAuthRoute("POST", "/api/v2/setup")
-	h.RegisterNoAuthRoute("POST", "/api/v2/setup")
 	h.RegisterNoAuthRoute("GET", "/api/v2/setup")
 	// h.RegisterNoAuthRoute("GET", "/api/v2/swagger.json")
 
