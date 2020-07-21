@@ -396,8 +396,8 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 
 	h := ihttp.NewAuthenticationHandler(s.Logger, kithttp.ErrorHandler(0), &authSvc, &ts.UserSvc)
 	h.RegisterNoAuthRoute("GET", "/api/v2")
-	h.RegisterNoAuthRoute("POST", "/api/v2/signin")
-	h.RegisterNoAuthRoute("POST", "/api/v2/signout")
+	// h.RegisterNoAuthRoute("POST", "/api/v2/signin")
+	// h.RegisterNoAuthRoute("POST", "/api/v2/signout")
 	h.RegisterNoAuthRoute("POST", "/api/v2/setup")
 	h.RegisterNoAuthRoute("GET", "/api/v2/setup")
 	// h.RegisterNoAuthRoute("GET", "/api/v2/swagger.json")
