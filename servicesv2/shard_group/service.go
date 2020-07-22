@@ -30,7 +30,7 @@ func (s *Service) CreateShardGroup(ctx context.Context, bucketID influxdb.ID, ti
 		BetweenTime: &timestamp,
 	})
 
-	if err != nil {
+	if err != nil { 
 		return nil, err
 	}
 
@@ -39,19 +39,20 @@ func (s *Service) CreateShardGroup(ctx context.Context, bucketID influxdb.ID, ti
 		return &sgs[0], nil
 	}
 
+
 	bucket, err := s.bucketSvc.FindBucketByID(ctx, bucketID)
 	if err != nil {
 		return nil, err
 	}
-
 	// create one that fits within the time constraints of the existing shards or create a new shard group that makes sense for this time stamp
 	// TODO: this doesnt attempt to fit the new shard group inside the existing shard group list and can lead to overlaps in shard groups.
 	// a better solution is to first check if there is any overlaps and adjust this shard groups start and end time to avoid these overlaps.
-	startTime := timestamp.Truncate(bucket.RetentionPeriod).UTC()
+	sgd := shardGroupDuration(bucket.RetentionPeriod)
+	startTime := timestamp.Truncate(sgd).UTC()
 	sgi := &meta.ShardGroupInfo{
 		ID:        uint64(s.IDGen.ID()),
 		StartTime: startTime,
-		EndTime:   startTime.Add(bucket.RetentionPeriod).UTC(),
+		EndTime:   startTime.Add(sgd).UTC(),
 		Shards: []meta.ShardInfo{
 			{ID: uint64(s.IDGen.ID())},
 		},
@@ -66,4 +67,12 @@ func (s *Service) FindShardGroups(ctx context.Context, filter influxdb.FindShard
 
 func (s *Service) DeleteShardGroup(ctx context.Context, bucketID, id influxdb.ID) error {
 	return s.store.DeleteShardGroup(ctx, bucketID, id)
+}
+func shardGroupDuration(d time.Duration) time.Duration {
+	if d >= 180*24*time.Hour || d == 0 { // 6 months or 0
+		return 7 * 24 * time.Hour
+	} else if d >= 2*24*time.Hour { // 2 days
+		return 1 * 24 * time.Hour
+	}
+	return 1 * time.Hour
 }
