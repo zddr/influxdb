@@ -484,7 +484,7 @@ func (h *Handler) writeHeader(w http.ResponseWriter, code int) {
 }
 
 // serveQuery parses an incoming query and, if valid, executes the query.
-func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user meta.User) {
+func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user meta.User) { //bookmark (al)
 	atomic.AddInt64(&h.stats.QueryRequests, 1)
 	defer func(start time.Time) {
 		atomic.AddInt64(&h.stats.QueryRequestDuration, time.Since(start).Nanoseconds())

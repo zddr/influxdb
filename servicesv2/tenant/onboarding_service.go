@@ -27,11 +27,8 @@ func (s *OnboardService) IsOnboarding(ctx context.Context) (bool, error) {
 	err := s.store.View(ctx, func(tx kv.Tx) error {
 		// we are allowed to onboard a user if we have no users or orgs
 		users, _ := s.store.ListUsers(ctx, tx, influxdb.FindOptions{Limit: 1})
-		fmt.Println(users)
 		orgs, _ := s.store.ListOrgs(ctx, tx, influxdb.FindOptions{Limit: 1})
-		fmt.Println(orgs)
 		if len(users) == 0 && len(orgs) == 0 {
-			fmt.Println("not allowed??")
 			allowed = true
 		}
 		return nil

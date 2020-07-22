@@ -69,7 +69,7 @@ func (h *WriteHandler) V2ResourceHandler() *resourceHandler {
 	return &resourceHandler{prefix: prefix, WriteHandler: h}
 }
 
-func (h *WriteHandler) handleWrite(w http.ResponseWriter, r *http.Request) {
+func (h *WriteHandler) handleWrite(w http.ResponseWriter, r *http.Request) { // bookmark (al)
 	// lookup bucket
 	precision := chi.URLParam(r, "precision")
 	switch precision {
