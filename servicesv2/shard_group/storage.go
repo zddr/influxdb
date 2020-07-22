@@ -17,14 +17,12 @@ var (
 )
 
 type Store struct {
-	kvStore         kv.Store
-	shardGroupIndex *kv.Index
+	kvStore kv.Store
 }
 
 func NewStore(kvStore kv.Store) *Store {
 	return &Store{
-		kvStore:         kvStore,
-		shardGroupIndex: kv.NewIndex(shardGroupIndex, kv.WithIndexReadPathEnabled),
+		kvStore: kvStore,
 	}
 }
 
@@ -49,12 +47,14 @@ func (s *Store) CreateShardGroup(ctx context.Context, bucketID influxdb.ID, sg *
 			return err
 		}
 
-		bucketKey, err := bucketID.Encode()
+		idx, err := tx.Bucket(shardGroupIndex)
 		if err != nil {
 			return err
 		}
 
-		return s.shardGroupIndex.Insert(tx, bucketKey, key)
+		ikey, err := indexKey(bucketID, id)
+
+		return idx.Put(ikey, key)
 	})
 
 	return err
@@ -68,7 +68,6 @@ func (s *Store) FindShardGroup(ctx context.Context, id influxdb.ID) (*meta.Shard
 			return err
 		}
 
-		id := influxdb.ID(sg.ID)
 		key, err := id.Encode()
 		if err != nil {
 			return err
@@ -78,7 +77,7 @@ func (s *Store) FindShardGroup(ctx context.Context, id influxdb.ID) (*meta.Shard
 			return err
 		}
 
-		return json.Unmarshal(bytest, rtn)
+		return json.Unmarshal(bytes, rtn)
 	})
 	return rtn, err
 }
@@ -87,10 +86,10 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 
 	sgis := []meta.ShardGroupInfo{}
 
-	filterFn := func(sgi meta.ShardGroupInfo) bool {
-		return (filter.Min == nil || (sgi.EndTime.After(*filter.Min)) &&
-		(filter.Max == nil || (!sgi.StartTime.After(*filter.Max)) &&
-		(filter.BetweenTime == nil || (sgi.StartTime.Before(*filter.BetweenTime) && shard.EndTme.After(*filter.BetweenTime))
+	keepFn := func(sgi meta.ShardGroupInfo) bool {
+		return (filter.Min == nil || sgi.EndTime.After(*filter.Min)) &&
+			(filter.Max == nil || !sgi.StartTime.After(*filter.Max)) &&
+			(filter.BetweenTime == nil || (sgi.StartTime.Before(*filter.BetweenTime) && sgi.EndTime.After(*filter.BetweenTime)))
 	}
 
 	err := s.kvStore.View(ctx, func(tx kv.Tx) error {
@@ -101,19 +100,30 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 				return err
 			}
 
-			err =s.shardGroupIndex.Walk(ctx, tx, fKey, func(k, v []byte) error {
+			idx, err := tx.Bucket(shardGroupIndex)
+			if err != nil {
+				return err
+			}
+
+			cursor, err := idx.ForwardCursor(fKey, kv.WithCursorPrefix(fKey))
+			if err != nil {
+				return err
+			}
+			defer cursor.Close()
+
+			for k, v := cursor.Next(); k != nil; k, v = cursor.Next() {
 				sgi := meta.ShardGroupInfo{}
 
 				err := json.Unmarshal(v, &sgi)
 				if err != nil {
 					return err
 				}
-				if filterFn(sgi) {
+				if keepFn(sgi) {
 					sgis = append(sgis, sgi)
 				}
 
-			})
-			return err
+			}
+			return cursor.Err()
 		}
 
 		b, err := tx.Bucket(shardGroupBucket)
@@ -134,12 +144,12 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 			if err != nil {
 				return err
 			}
-			if filterFn(sgi) {
+			if keepFn(sgi) {
 				sgis = append(sgis, sgi)
 			}
 		}
 		return c.Err()
-	}
+	})
 
 	if err != nil {
 		return nil, err
@@ -149,21 +159,7 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 }
 
 func (s *Store) DeleteShardGroup(ctx context.Context, bucketID, id influxdb.ID) error {
-	key, err := id.Encode()
-	if err != nil {
-		return err
-	}
-
-	foreignKey, err := bucketID.Encode()
-	if err != nil {
-		return err
-	}
-
-	err = s.kvStore.Update(ctx, func(tx kv.Tx) error {
-		if err :=s.shardGroupIndex.Delete(tx, foreignKey, key); err != nil {
-			return err
-		}
-
+	err := s.kvStore.Update(ctx, func(tx kv.Tx) error {
 		b, err := tx.Bucket(shardGroupBucket)
 		if err != nil {
 			return err
@@ -172,7 +168,47 @@ func (s *Store) DeleteShardGroup(ctx context.Context, bucketID, id influxdb.ID) 
 		if err != nil {
 			return err
 		}
+
+		idx, err := tx.Bucket(shardGroupIndex)
+		if err != nil {
+			return err
+		}
+
+		ikey, err := indexKey(bucketID, id)
+		if err != nil {
+			return err
+		}
+
+		if err := idx.Delete(ikey); err != nil {
+			return err
+		}
+
 		return b.Delete(key)
 	})
 	return err
+}
+
+func indexKey(b, sg influxdb.ID) ([]byte, error) {
+	bucketID, err := b.Encode()
+
+	if err != nil {
+		return nil, &influxdb.Error{
+			Code: influxdb.EInvalid,
+			Err:  err,
+		}
+	}
+
+	shardGroupID, err := b.Encode()
+
+	if err != nil {
+		return nil, &influxdb.Error{
+			Code: influxdb.EInvalid,
+			Err:  err,
+		}
+	}
+
+	k := make([]byte, influxdb.IDLength*2)
+	copy(k, bucketID)
+	copy(k[influxdb.IDLength:], shardGroupID)
+	return k, nil
 }

@@ -7,26 +7,26 @@ import (
 	"github.com/influxdata/influxdb/services/meta"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	"github.com/influxdata/influxdb/servicesv2/snowflake"
-
 )
 
 type Service struct {
-	store *Store
-	IDGen          influxdb.IDGenerator
-
+	store     *Store
+	IDGen     influxdb.IDGenerator
+	bucketSvc influxdb.BucketService
 }
 
-func NewService(s *Store) *Service {
+func NewService(s *Store, bucketSvc influxdb.BucketService) *Service {
 	return &Service{
-		store: s,
-		IDGen: snowflake.NewDefaultIDGenerator(),
+		store:     s,
+		IDGen:     snowflake.NewDefaultIDGenerator(),
+		bucketSvc: bucketSvc,
 	}
 }
 
 func (s *Service) CreateShardGroup(ctx context.Context, bucketID influxdb.ID, timestamp time.Time) (*meta.ShardGroupInfo, error) {
 	// see if we already have one that timestamp fits into
 	sgs, err := s.FindShardGroups(ctx, influxdb.FindShardFilter{
-		BucketID: &bucketID,
+		BucketID:    &bucketID,
 		BetweenTime: &timestamp,
 	})
 
@@ -36,16 +36,22 @@ func (s *Service) CreateShardGroup(ctx context.Context, bucketID influxdb.ID, ti
 
 	if len(sgs) >= 1 {
 		// with the current ugly way to make ShardGroups it is possible to have more then 1
-		return sgs[0], nil
+		return &sgs[0], nil
+	}
+
+	bucket, err := s.bucketSvc.FindBucketByID(ctx, bucketID)
+	if err != nil {
+		return nil, err
 	}
 
 	// create one that fits within the time constraints of the existing shards or create a new shard group that makes sense for this time stamp
 	// TODO: this doesnt attempt to fit the new shard group inside the existing shard group list and can lead to overlaps in shard groups.
-	// a better solution is to first check if there is any overlaps and adjust this shard groups start and end time to avoid these overlaps. 
+	// a better solution is to first check if there is any overlaps and adjust this shard groups start and end time to avoid these overlaps.
+	startTime := timestamp.Truncate(bucket.RetentionPeriod).UTC()
 	sgi := &meta.ShardGroupInfo{
-		ID: uint64(s.IDGen.ID())
-		StartTime: timestamp.Truncate(rpi.ShardGroupDuration).UTC(),
-		EndTime: sgi.StartTime.Add(rpi.ShardGroupDuration).UTC(),
+		ID:        uint64(s.IDGen.ID()),
+		StartTime: startTime,
+		EndTime:   startTime.Add(bucket.RetentionPeriod).UTC(),
 		Shards: []meta.ShardInfo{
 			{ID: uint64(s.IDGen.ID())},
 		},
@@ -55,11 +61,9 @@ func (s *Service) CreateShardGroup(ctx context.Context, bucketID influxdb.ID, ti
 }
 
 func (s *Service) FindShardGroups(ctx context.Context, filter influxdb.FindShardFilter) ([]meta.ShardGroupInfo, error) {
-	// lookup the bucket based on database (which is the bucket name) how do we know what org this is?
-	// create a filter that includes the times and the bucket id to make the lookup quick
-	// return shard groups
+	return s.store.ListShardGroups(ctx, filter)
 }
 
-func (s *Service) DeleteShardGroup(ctx context.Context, id influxdb.ID) error {
-	// delete the shard that belongs to this bucket. ID's should be unique so we should be able to just delete this
+func (s *Service) DeleteShardGroup(ctx context.Context, bucketID, id influxdb.ID) error {
+	return s.store.DeleteShardGroup(ctx, bucketID, id)
 }

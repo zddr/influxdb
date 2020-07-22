@@ -23,7 +23,7 @@ type WriteHandler struct {
 
 	bucketSvc influxdb.BucketService
 	orgSvc    influxdb.OrganizationService
-	// dbrpSvc   influxdb.DBRPMappingServiceV2
+	dbrpSvc   influxdb.DBRPMappingServiceV2
 }
 
 const (
@@ -61,11 +61,11 @@ type resourceHandler struct {
 func (h *resourceHandler) Prefix() string {
 	return h.prefix
 }
-func (h *WriteHandler) v1ResourceHandler() *resourceHandler {
+func (h *WriteHandler) V1ResourceHandler() *resourceHandler {
 	return &resourceHandler{prefix: v1Prefix, WriteHandler: h}
 }
 
-func (h *WriteHandler) v2ResourceHandler() *resourceHandler {
+func (h *WriteHandler) V2ResourceHandler() *resourceHandler {
 	return &resourceHandler{prefix: prefix, WriteHandler: h}
 }
 
@@ -84,16 +84,23 @@ func (h *WriteHandler) handleWrite(w http.ResponseWriter, r *http.Request) {
 		h.api.Err(w, r, err)
 		return
 	}
-	org, err := h.findOrganization(r.Context(), r)
-	if err != nil {
+
+	switch precision {
+	case "", "n", "ns", "u", "ms", "s", "m", "h":
+		// it's valid
+	default:
+		err := fmt.Errorf("invalid precision %q (use n, u, ms, s, m or h)", precision)
 		h.api.Err(w, r, err)
 		return
 	}
 
-	bucket, err := h.findBucket(r.Context(), r, org.ID)
+	org, bucket, err := h.findTenantV2(r.Context(), r)
 	if err != nil {
-		h.api.Err(w, r, err)
-		return
+		org, bucket, err = h.findTenantV1(r.Context(), r)
+		if err != nil {
+			h.api.Err(w, r, err)
+			return
+		}
 	}
 
 	// parse points
@@ -108,7 +115,7 @@ func (h *WriteHandler) handleWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// write
-	if err := h.writeSvc.WritePoints(r.Context(), bucket.ID, points); err != nil {
+	if err := h.writeSvc.WritePoints(r.Context(), org.ID, bucket.ID, points); err != nil {
 		h.api.Err(w, r, err)
 		return
 	}
@@ -129,6 +136,12 @@ func (h *WriteHandler) parsePoints(ctx context.Context, r *http.Request, precisi
 	}
 
 	var bs []byte
+	if r.ContentLength > 0 {
+		// This will just be an initial hint for the gzip reader, as the
+		// bytes.Buffer will grow as needed when ReadFrom is called
+		bs = make([]byte, 0, r.ContentLength)
+	}
+
 	buf := bytes.NewBuffer(bs)
 
 	_, err := buf.ReadFrom(body)
@@ -138,9 +151,52 @@ func (h *WriteHandler) parsePoints(ctx context.Context, r *http.Request, precisi
 	return models.ParsePointsWithPrecision(buf.Bytes(), time.Now().UTC(), precision)
 }
 
+func (h *WriteHandler) findTenantV2(ctx context.Context, r *http.Request) (*influxdb.Organization, *influxdb.Bucket, error) {
+	org, err := h.findOrganization(r.Context(), r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bucket, err := h.findBucket(r.Context(), r, org.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return org, bucket, nil
+}
+
+func (h *WriteHandler) findTenantV1(ctx context.Context, r *http.Request) (*influxdb.Organization, *influxdb.Bucket, error) {
+	db := chi.URLParam(r, "db")
+	rp := chi.URLParam(r, "rp")
+
+	dbrps, _, err := h.dbrpSvc.FindMany(ctx, influxdb.DBRPMappingFilterV2{
+		Database:        &db,
+		RetentionPolicy: &rp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(dbrps) != 1 {
+		return nil, nil, fmt.Errorf("failed for find DBRP mapping for db:%q, rp:%q", db, rp)
+	}
+
+	org, err := h.orgSvc.FindOrganizationByID(ctx, dbrps[0].OrganizationID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bucket, err := h.bucketSvc.FindBucketByID(ctx, dbrps[0].BucketID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return org, bucket, nil
+}
+
 func (h *WriteHandler) findOrganization(ctx context.Context, r *http.Request) (*influxdb.Organization, error) {
 	filter := influxdb.OrganizationFilter{}
-	if organization := r.URL.Query().Get("org"); organization != "" {
+	if organization := chi.URLParam(r, "org"); organization != "" {
 		if id, err := influxdb.IDFromString(organization); err == nil {
 			filter.ID = id
 		} else {
@@ -148,7 +204,7 @@ func (h *WriteHandler) findOrganization(ctx context.Context, r *http.Request) (*
 		}
 	}
 
-	if reqID := r.URL.Query().Get("org_id"); reqID != "" {
+	if reqID := chi.URLParam(r, "org_id"); reqID != "" {
 		var err error
 		filter.ID, err = influxdb.IDFromString(reqID)
 		if err != nil {

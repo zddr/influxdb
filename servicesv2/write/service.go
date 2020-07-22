@@ -21,7 +21,15 @@ type Service struct {
 	store *tsdb.Store
 }
 
-func (s *Service) WritePoints(ctx context.Context, bucketID influxdb.ID, points []models.Point) error {
+func NewService(store *tsdb.Store, bucketSvc influxdb.BucketService, shardGroupSvc influxdb.ShardGroupService) *Service {
+	return &Service{
+		bucketSvc:     bucketSvc,
+		shardGroupSvc: shardGroupSvc,
+		store:         store,
+	}
+}
+
+func (s *Service) WritePoints(ctx context.Context, orgID, bucketID influxdb.ID, points []models.Point) error {
 	bucket, err := s.bucketSvc.FindBucketByID(ctx, bucketID)
 	if err != nil {
 		return err

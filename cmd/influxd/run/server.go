@@ -37,7 +37,9 @@ import (
 	"github.com/influxdata/influxdb/servicesv2/dbrp"
 	ihttp "github.com/influxdata/influxdb/servicesv2/http"
 	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
+	"github.com/influxdata/influxdb/servicesv2/shard_group"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
+	"github.com/influxdata/influxdb/servicesv2/write"
 	"github.com/influxdata/influxdb/storage/reads"
 	"github.com/influxdata/influxdb/tcp"
 	"github.com/influxdata/influxdb/tsdb"
@@ -391,8 +393,7 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 		return
 	}
 	authSvc := authv2.NewService(authStore, ts.TenantSvc)
-	authSvc = authv2.NewAuthedAuthorizationService(authSvc, ts.TenantSvc)
-	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authSvc, ts.TenantSvc)
+	authHandler := authv2.NewHTTPAuthHandler(s.Logger, authv2.NewAuthedAuthorizationService(authSvc, ts.TenantSvc), ts.TenantSvc)
 
 	h := ihttp.NewAuthenticationHandler(s.Logger, kithttp.ErrorHandler(0), &authSvc, &ts.UserSvc)
 	h.RegisterNoAuthRoute("GET", "/api/v2")
@@ -408,6 +409,12 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	dbrpSvc := dbrp.NewService(ts.BucketSvc, kvStore)
 	dbrpHandler := dbrp.NewHTTPHandler(s.Logger, dbrpSvc, ts.OrgSvc)
 	v2Api.WithResourceHandler(dbrpHandler)
+
+	shardGroupSvc := shard_group.NewService(shard_group.NewStore(kvStore), ts.BucketSvc)
+	writeSvc := write.NewService(s.TSDBStore, ts.BucketSvc, shardGroupSvc)
+	writeHandler := write.NewHTTPWriteHandler(writeSvc, ts.OrgSvc, ts.BucketSvc)
+	v2Api.WithResourceHandler(writeHandler.V1ResourceHandler())
+	v2Api.WithResourceHandler(writeHandler.V2ResourceHandler())
 
 	// OrgHandler
 	orgHandler := ts.NewOrgHTTPHandler(s.Logger)

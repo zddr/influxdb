@@ -106,6 +106,7 @@ func (h *AuthenticationHandler) unauthorized(ctx context.Context, w http.Respons
 func (h *AuthenticationHandler) MiddlewareHandler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if noAuth, _, _ := h.noAuthRouter.Lookup(r.Method, r.URL.Path); noAuth != nil {
+			fmt.Println("skipping auth")
 			next.ServeHTTP(w, r)
 			return
 		}
