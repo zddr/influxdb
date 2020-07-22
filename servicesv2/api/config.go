@@ -1,9 +1,7 @@
 package api
 
 import (
-	"fmt"
 	"net/url"
-	"os"
 	"os/user"
 	fp "path/filepath"
 )
@@ -38,11 +36,6 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	// confirm that BoltPath is a valid path
-	if err := c.ValidateBoltPath(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -50,18 +43,5 @@ func (c *Config) ValidateBindAddr() error {
 	if _, err := url.ParseRequestURI(c.BindAddr); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (c *Config) ValidateBoltPath() error {
-	// Make sure path is a valid file path, possibly with the file package
-	if _, err := os.Stat(c.BoltFile); os.IsNotExist(err) {
-		return err
-	}
-
-	if fp.Ext(c.BoltFile) != ".bolt" {
-		return fmt.Errorf("%s is not a valid bolt file", c.BoltFile)
-	}
-
 	return nil
 }
