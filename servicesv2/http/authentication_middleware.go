@@ -102,57 +102,56 @@ func (h *AuthenticationHandler) unauthorized(ctx context.Context, w http.Respons
 	UnauthorizedError(ctx, h, w)
 }
 
-// ServeHTTP extracts the session or token from the http request and places the resulting authorizer on the request context.
-func (h *AuthenticationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("serving http")
-	if handler, _, _ := h.noAuthRouter.Lookup(r.Method, r.URL.Path); handler != nil {
-		fmt.Println("should have no auth.....")
-		h.Handler.ServeHTTP(w, r)
-		return
-	}
-
-	fmt.Println("ctx")
-
-	ctx := r.Context()
-	scheme, err := ProbeAuthScheme(r)
-	if err != nil {
-		h.unauthorized(ctx, w, err)
-		return
-	}
-
-	var auth influxdb.Authorizer
-	switch scheme {
-	case tokenAuthScheme:
-		auth, err = h.extractAuthorization(ctx, r)
-	// case sessionAuthScheme: // todo (al) use session
-	// 	auth, err = h.extractSession(ctx, r)
-	default:
-		// TODO: this error will be nil if it gets here, this should be remedied with some
-		//  sentinel error I'm thinking
-		err = errors.New("invalid auth scheme")
-	}
-	if err != nil {
-		h.unauthorized(ctx, w, err)
-		return
-	}
-
-	// jwt based auth is permission based rather than identity based
-	// and therefor has no associated user. if the user ID is invalid
-	// disregard the user active check
-	if auth.GetUserID().Valid() {
-		if err = h.isUserActive(ctx, auth); err != nil {
-			InactiveUserError(ctx, h, w)
+// MiddlewareHandler extracts the session or token from the http request and places the resulting authorizer on the request context.
+func (h *AuthenticationHandler) MiddlewareHandler(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		if noAuth, _, _ := h.noAuthRouter.Lookup(r.Method, r.URL.Path); noAuth != nil {
+			next.ServeHTTP(w, r)
 			return
 		}
+
+		ctx := r.Context()
+		scheme, err := ProbeAuthScheme(r)
+		if err != nil {
+			h.unauthorized(ctx, w, err)
+			return
+		}
+
+		var auth influxdb.Authorizer
+		switch scheme {
+		case tokenAuthScheme:
+			auth, err = h.extractAuthorization(ctx, r)
+		// case sessionAuthScheme: // todo (al) use session
+		// 	auth, err = h.extractSession(ctx, r)
+		default:
+			// TODO: this error will be nil if it gets here, this should be remedied with some
+			//  sentinel error I'm thinking
+			err = errors.New("invalid auth scheme")
+		}
+		if err != nil {
+			h.unauthorized(ctx, w, err)
+			return
+		}
+
+		// jwt based auth is permission based rather than identity based
+		// and therefor has no associated user. if the user ID is invalid
+		// disregard the user active check
+		if auth.GetUserID().Valid() {
+			if err = h.isUserActive(ctx, auth); err != nil {
+				InactiveUserError(ctx, h, w)
+				return
+			}
+		}
+
+		ctx = icontext.SetAuthorizer(ctx, auth)
+
+		if span := opentracing.SpanFromContext(ctx); span != nil {
+			span.SetTag("user_id", auth.GetUserID().String())
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 
-	ctx = icontext.SetAuthorizer(ctx, auth)
-
-	if span := opentracing.SpanFromContext(ctx); span != nil {
-		span.SetTag("user_id", auth.GetUserID().String())
-	}
-
-	h.Handler.ServeHTTP(w, r.WithContext(ctx))
+	return http.HandlerFunc(fn)
 }
 
 func (h *AuthenticationHandler) isUserActive(ctx context.Context, auth influxdb.Authorizer) error {

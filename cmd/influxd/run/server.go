@@ -400,7 +400,7 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	h.RegisterNoAuthRoute("GET", "/api/v2/setup")
 	// h.RegisterNoAuthRoute("GET", "/api/v2/swagger.json")
 
-	v2Api := api.NewAPIHandler(bindAddr, ihttp.AuthMiddleware(h))
+	v2Api := api.NewAPIHandler(bindAddr, h.MiddlewareHandler)
 	// v2Api = ihttp.WrapAuth(h)
 	v2Api.WithResourceHandler(authHandler)
 
