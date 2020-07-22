@@ -10,7 +10,6 @@ import (
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	icontext "github.com/influxdata/influxdb/servicesv2/context"
 	"github.com/influxdata/influxdb/servicesv2/jsonweb"
-	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 )
@@ -48,20 +47,32 @@ func NewAuthenticationHandler(log *zap.Logger, h influxdb.HTTPErrorHandler, auth
 	}
 }
 
-func AuthMiddleware(h http.Handler) kithttp.Middleware {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			// statusW := NewStatusResponseWriter(w)
+// func AuthMiddleware() kithttp.Middleware {
+// 	return func(next http.Handler) http.Handler {
+// 		fn := func(w http.ResponseWriter, r *http.Request) {
+// 			next.ServeHTTP(w, r)
+// 		}
+// 		return http.HandlerFunc(fn)
+// 	}
+// }
 
-			next.ServeHTTP(w, r)
-		}
-		return http.HandlerFunc(fn)
-	}
-}
+// // func Wrap(next http.Handler) kithttp.Middleware {
+// // 	return wrap(next)
+// // }
+
+// // func wrap(next http.Handler) http.Handler {
+// // 	fn := func(w http.ResponseWriter, r *http.Request) {
+// // 		// statusW := NewStatusResponseWriter(w)
+
+// // 		next.ServeHTTP(w, r)
+// // 	}
+// // 	return http.HandlerFunc(fn)
+// // }
 
 // RegisterNoAuthRoute excludes routes from needing authentication.
 func (h *AuthenticationHandler) RegisterNoAuthRoute(method, path string) {
 	// the handler specified here does not matter.
+	fmt.Println("registering no auth: ", path)
 	h.noAuthRouter.HandlerFunc(method, path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 }
 
@@ -93,10 +104,14 @@ func (h *AuthenticationHandler) unauthorized(ctx context.Context, w http.Respons
 
 // ServeHTTP extracts the session or token from the http request and places the resulting authorizer on the request context.
 func (h *AuthenticationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("serving http")
 	if handler, _, _ := h.noAuthRouter.Lookup(r.Method, r.URL.Path); handler != nil {
+		fmt.Println("should have no auth.....")
 		h.Handler.ServeHTTP(w, r)
 		return
 	}
+
+	fmt.Println("ctx")
 
 	ctx := r.Context()
 	scheme, err := ProbeAuthScheme(r)

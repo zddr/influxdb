@@ -15,12 +15,19 @@ import (
 
 var (
 	authorizationBucket = []byte("authorizationsv1")
+	authIndex           = []byte("authorizationindexv1")
 	bucketBucket        = []byte("bucketsv1")
+	bucketIndex         = []byte("bucketindexv1")
+	organizationIndex   = []byte("organizationindexv1")
 	organizationBucket  = []byte("organizationsv1")
 	userBucket          = []byte("usersv1")
+	userIndex           = []byte("userindexv1")
 	dbrpBucket          = []byte("dbrpv1")
 	dbrpIndexBucket     = []byte("dbrpbyorganddbindexv1")
 	dbrpDefaultBucket   = []byte("dbrpdefaultv1")
+	dbrpDefaultIndex    = []byte("dbrpdefaultindexv1")
+	urmBucket           = []byte("userresourcemappingsv1")
+	urmByUserIndex      = []byte("userresourcemappingsbyuserindexv1")
 )
 
 const DefaultFilename = "influxd.bolt"
@@ -89,12 +96,19 @@ func (c *Client) initialize() error {
 		// TODO: make card to normalize everything under kv?
 		bkts := [][]byte{
 			authorizationBucket,
+			authIndex,
 			bucketBucket, //bolt bucket of TS buckets
+			bucketIndex,
 			organizationBucket,
+			organizationIndex,
 			userBucket,
+			userIndex,
 			dbrpBucket,
 			dbrpIndexBucket,
+			dbrpDefaultIndex,
 			dbrpDefaultBucket,
+			urmBucket,
+			urmByUserIndex,
 		}
 		for _, bktName := range bkts {
 			if _, err := tx.CreateBucketIfNotExists(bktName); err != nil {
