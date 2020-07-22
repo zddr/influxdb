@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/influxdb/models"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
 	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
+	"go.uber.org/zap"
 )
 
 // WriteHandler represents an HTTP API handler for write requests.
@@ -32,12 +33,14 @@ const (
 )
 
 // NewHTTPWriteHandler constructs a new http server.
-func NewHTTPWriteHandler(writeSvc *Service, orgSvc influxdb.OrganizationService, bucketSvc influxdb.BucketService) *WriteHandler {
+func NewHTTPWriteHandler(writeSvc *Service, orgSvc influxdb.OrganizationService, bucketSvc influxdb.BucketService, dbrpSvc influxdb.DBRPMappingServiceV2) *WriteHandler {
+	logger, _ := zap.NewDevelopment()
 	svr := &WriteHandler{
-		api:       kithttp.NewAPI(),
+		api:       kithttp.NewAPI(kithttp.WithLog(logger)),
 		writeSvc:  writeSvc,
 		bucketSvc: bucketSvc,
 		orgSvc:    orgSvc,
+		dbrpSvc:   dbrpSvc,
 	}
 
 	r := chi.NewRouter()
@@ -45,6 +48,7 @@ func NewHTTPWriteHandler(writeSvc *Service, orgSvc influxdb.OrganizationService,
 		middleware.Recoverer,
 		middleware.RequestID,
 		middleware.RealIP,
+		middleware.Logger,
 	)
 
 	r.Post("/", svr.handleWrite)
@@ -71,7 +75,7 @@ func (h *WriteHandler) V2ResourceHandler() *resourceHandler {
 
 func (h *WriteHandler) handleWrite(w http.ResponseWriter, r *http.Request) { // bookmark (al)
 	// lookup bucket
-	precision := chi.URLParam(r, "precision")
+	precision := r.URL.Query().Get("precision")
 	switch precision {
 	case "ns":
 		precision = "n"
@@ -96,8 +100,9 @@ func (h *WriteHandler) handleWrite(w http.ResponseWriter, r *http.Request) { // 
 
 	org, bucket, err := h.findTenantV2(r.Context(), r)
 	if err != nil {
-		org, bucket, err = h.findTenantV1(r.Context(), r)
-		if err != nil {
+		var v1err error
+		org, bucket, v1err = h.findTenantV1(r.Context(), r)
+		if v1err != nil {
 			h.api.Err(w, r, err)
 			return
 		}
@@ -166,8 +171,8 @@ func (h *WriteHandler) findTenantV2(ctx context.Context, r *http.Request) (*infl
 }
 
 func (h *WriteHandler) findTenantV1(ctx context.Context, r *http.Request) (*influxdb.Organization, *influxdb.Bucket, error) {
-	db := chi.URLParam(r, "db")
-	rp := chi.URLParam(r, "rp")
+	db := r.URL.Query().Get("db")
+	rp := r.URL.Query().Get("rp")
 
 	dbrps, _, err := h.dbrpSvc.FindMany(ctx, influxdb.DBRPMappingFilterV2{
 		Database:        &db,
@@ -196,7 +201,7 @@ func (h *WriteHandler) findTenantV1(ctx context.Context, r *http.Request) (*infl
 
 func (h *WriteHandler) findOrganization(ctx context.Context, r *http.Request) (*influxdb.Organization, error) {
 	filter := influxdb.OrganizationFilter{}
-	if organization := chi.URLParam(r, "org"); organization != "" {
+	if organization := r.URL.Query().Get("org"); organization != "" {
 		if id, err := influxdb.IDFromString(organization); err == nil {
 			filter.ID = id
 		} else {
@@ -204,7 +209,7 @@ func (h *WriteHandler) findOrganization(ctx context.Context, r *http.Request) (*
 		}
 	}
 
-	if reqID := chi.URLParam(r, "org_id"); reqID != "" {
+	if reqID := r.URL.Query().Get("org_id"); reqID != "" {
 		var err error
 		filter.ID, err = influxdb.IDFromString(reqID)
 		if err != nil {
@@ -215,7 +220,7 @@ func (h *WriteHandler) findOrganization(ctx context.Context, r *http.Request) (*
 }
 
 func (h *WriteHandler) findBucket(ctx context.Context, r *http.Request, orgID influxdb.ID) (*influxdb.Bucket, error) {
-	bucket := chi.URLParam(r, "bucket")
+	bucket := r.URL.Query().Get("bucket")
 	if id, err := influxdb.IDFromString(bucket); err == nil {
 		b, err := h.bucketSvc.FindBucket(ctx, influxdb.BucketFilter{
 			OrganizationID: &orgID,

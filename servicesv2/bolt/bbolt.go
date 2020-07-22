@@ -28,6 +28,8 @@ var (
 	dbrpDefaultIndex    = []byte("dbrpdefaultindexv1")
 	urmBucket           = []byte("userresourcemappingsv1")
 	urmByUserIndex      = []byte("userresourcemappingsbyuserindexv1")
+	shardGroupBucket    = []byte("shardgroupsv1")
+	shardGroupIndex     = []byte("shardgroupindexv1")
 )
 
 const DefaultFilename = "influxd.bolt"
@@ -109,6 +111,8 @@ func (c *Client) initialize() error {
 			dbrpDefaultBucket,
 			urmBucket,
 			urmByUserIndex,
+			shardGroupBucket,
+			shardGroupIndex,
 		}
 		for _, bktName := range bkts {
 			if _, err := tx.CreateBucketIfNotExists(bktName); err != nil {

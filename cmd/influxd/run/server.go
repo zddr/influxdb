@@ -412,7 +412,7 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 
 	shardGroupSvc := shard_group.NewService(shard_group.NewStore(kvStore), ts.BucketSvc)
 	writeSvc := write.NewService(s.TSDBStore, ts.BucketSvc, shardGroupSvc)
-	writeHandler := write.NewHTTPWriteHandler(writeSvc, ts.OrgSvc, ts.BucketSvc)
+	writeHandler := write.NewHTTPWriteHandler(writeSvc, ts.OrgSvc, ts.BucketSvc, dbrpSvc)
 	v2Api.WithResourceHandler(writeHandler.V1ResourceHandler())
 	v2Api.WithResourceHandler(writeHandler.V2ResourceHandler())
 

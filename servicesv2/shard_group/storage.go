@@ -21,6 +21,20 @@ type Store struct {
 }
 
 func NewStore(kvStore kv.Store) *Store {
+	err := kvStore.Update(context.Background(), func(tx kv.Tx) error {
+		_, err := tx.Bucket(shardGroupBucket)
+		if err != nil {
+			panic(err)
+		}
+		_, err = tx.Bucket(shardGroupIndex)
+		if err != nil {
+			panic(err)
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 	return &Store{
 		kvStore: kvStore,
 	}
@@ -76,7 +90,6 @@ func (s *Store) FindShardGroup(ctx context.Context, id influxdb.ID) (*meta.Shard
 		if err != nil {
 			return err
 		}
-
 		return json.Unmarshal(bytes, rtn)
 	})
 	return rtn, err
@@ -93,6 +106,11 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 	}
 
 	err := s.kvStore.View(ctx, func(tx kv.Tx) error {
+		b, err := tx.Bucket(shardGroupBucket)
+		if err != nil {
+			return err
+		}
+
 		// if bucketID is in the filter lets do a lookup by index
 		if filter.BucketID != nil {
 			fKey, err := filter.BucketID.Encode()
@@ -114,22 +132,22 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 			for k, v := cursor.Next(); k != nil; k, v = cursor.Next() {
 				sgi := meta.ShardGroupInfo{}
 
-				err := json.Unmarshal(v, &sgi)
+				bytes, err := b.Get(v)
+				if err != nil {
+					return err
+				}
+
+				err = json.Unmarshal(bytes, &sgi)
 				if err != nil {
 					return err
 				}
 				if keepFn(sgi) {
 					sgis = append(sgis, sgi)
 				}
-
 			}
 			return cursor.Err()
 		}
 
-		b, err := tx.Bucket(shardGroupBucket)
-		if err != nil {
-			return err
-		}
 
 		c, err := b.ForwardCursor(nil)
 		if err != nil {
@@ -152,6 +170,7 @@ func (s *Store) ListShardGroups(ctx context.Context, filter influxdb.FindShardFi
 	})
 
 	if err != nil {
+		panic(err)
 		return nil, err
 	}
 
