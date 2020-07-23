@@ -47,32 +47,9 @@ func NewAuthenticationHandler(log *zap.Logger, h influxdb.HTTPErrorHandler, auth
 	}
 }
 
-// func AuthMiddleware() kithttp.Middleware {
-// 	return func(next http.Handler) http.Handler {
-// 		fn := func(w http.ResponseWriter, r *http.Request) {
-// 			next.ServeHTTP(w, r)
-// 		}
-// 		return http.HandlerFunc(fn)
-// 	}
-// }
-
-// // func Wrap(next http.Handler) kithttp.Middleware {
-// // 	return wrap(next)
-// // }
-
-// // func wrap(next http.Handler) http.Handler {
-// // 	fn := func(w http.ResponseWriter, r *http.Request) {
-// // 		// statusW := NewStatusResponseWriter(w)
-
-// // 		next.ServeHTTP(w, r)
-// // 	}
-// // 	return http.HandlerFunc(fn)
-// // }
-
 // RegisterNoAuthRoute excludes routes from needing authentication.
 func (h *AuthenticationHandler) RegisterNoAuthRoute(method, path string) {
 	// the handler specified here does not matter.
-	fmt.Println("registering no auth: ", path)
 	h.noAuthRouter.HandlerFunc(method, path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 }
 

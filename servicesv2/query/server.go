@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,14 +14,19 @@ import (
 	"github.com/influxdata/flux"
 	"github.com/influxdata/influxdb/flux/client"
 	"github.com/influxdata/influxdb/services/storage"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
+	"go.uber.org/zap"
 )
 
 type QueryHandler struct {
 	chi.Router
-	api *kithttp.API
-
+	api          *kithttp.API
 	queryService QueryService
+
+	orgSvc    influxdb.OrganizationService
+	bucketSvc influxdb.BucketService
+	dbrpSvc   influxdb.DBRPMappingServiceV2
 }
 
 // httpDialect is an encoding dialect that can write metadata to HTTP headers
@@ -33,9 +39,14 @@ const (
 	prefix   = "/api/v2/query"
 )
 
-func NewHTTPQueryHandler(s QueryService) *QueryHandler {
+func NewHTTPQueryHandler(s QueryService, orgSvc influxdb.OrganizationService, bucketSvc influxdb.BucketService, dbrpSvc influxdb.DBRPMappingServiceV2) *QueryHandler {
+	logger, _ := zap.NewDevelopment()
 	svr := &QueryHandler{
+		api:          kithttp.NewAPI(kithttp.WithLog(logger)),
 		queryService: s,
+		bucketSvc:    bucketSvc,
+		orgSvc:       orgSvc,
+		dbrpSvc:      dbrpSvc,
 	}
 
 	r := chi.NewRouter()
@@ -44,11 +55,29 @@ func NewHTTPQueryHandler(s QueryService) *QueryHandler {
 		middleware.RequestID,
 		middleware.RealIP,
 	)
-	r.Post("/api/v2/query", svr.HandleQuery)
+	r.Post("/", svr.HandleQuery)
+
+	svr.Router = r
 	return svr
 }
 
-func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
+type resourceHandler struct {
+	prefix string
+	*QueryHandler
+}
+
+func (h *resourceHandler) Prefix() string {
+	return h.prefix
+}
+func (h *QueryHandler) V1ResourceHandler() *resourceHandler {
+	return &resourceHandler{prefix: v1Prefix, QueryHandler: h}
+}
+
+func (h *QueryHandler) V2ResourceHandler() *resourceHandler {
+	return &resourceHandler{prefix: prefix, QueryHandler: h}
+}
+
+func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) { // todo (al) make private
 	req, err := decodeQueryRequest(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -65,9 +94,15 @@ func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 
 	pr := req.ProxyRequest()
 
+	org, err := h.findOrganization(r.Context(), r)
+	if err != nil {
+		h.api.Err(w, r, err)
+		return
+	}
+
 	// execute the query
 	// wrap auth middleware here to check if user is allowed to query
-	q, err := h.queryService.Query(ctx, pr.Compiler)
+	q, err := h.queryService.Query(ctx, org.ID, pr.Compiler)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		h.api.Err(w, r, err)
@@ -103,6 +138,27 @@ func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 			h.api.Err(w, r, err)
 		}
 	}
+}
+
+func (h *QueryHandler) findOrganization(ctx context.Context, r *http.Request) (*influxdb.Organization, error) {
+	filter := influxdb.OrganizationFilter{}
+
+	if organization := r.URL.Query().Get("org"); organization != "" {
+		if id, err := influxdb.IDFromString(organization); err == nil {
+			filter.ID = id
+		} else {
+			filter.Name = &organization
+		}
+	}
+
+	if reqID := r.URL.Query().Get("orgID"); reqID != "" {
+		var err error
+		filter.ID, err = influxdb.IDFromString(reqID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return h.orgSvc.FindOrganization(ctx, filter)
 }
 
 func decodeQueryRequest(r *http.Request) (*client.QueryRequest, error) {

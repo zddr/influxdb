@@ -6,10 +6,11 @@ import (
 	"github.com/influxdata/flux"
 	"github.com/influxdata/flux/memory"
 	"github.com/influxdata/influxdb/flux/builtin"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 type QueryService interface {
-	Query(ctx context.Context, compiler flux.Compiler) (flux.Query, error)
+	Query(ctx context.Context, orgID influxdb.ID, compiler flux.Compiler) (flux.Query, error)
 }
 
 type Service struct {
@@ -31,7 +32,7 @@ func NewService() *Service {
 	}
 }
 
-func (s *Service) Query(ctx context.Context, compiler flux.Compiler) (flux.Query, error) {
+func (s *Service) Query(ctx context.Context, orgID influxdb.ID, compiler flux.Compiler) (flux.Query, error) {
 	for _, dep := range s.fluxDeps {
 		ctx = dep.Inject(ctx)
 	}

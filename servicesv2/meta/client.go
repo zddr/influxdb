@@ -15,6 +15,14 @@ type Client struct {
 	ShardGroupService  v2.ShardGroupService
 }
 
+func NewClient(bucketSvc v2.BucketService, dbrpSvc v2.DBRPMappingServiceV2, shardGroupSvc v2.ShardGroupService) *Client {
+	return &Client{
+		BucketService:      bucketSvc,
+		DBRPMappingService: dbrpSvc,
+		ShardGroupService:  shardGroupSvc,
+	}
+}
+
 func (c *Client) Database(db string) *meta.DatabaseInfo {
 	dbrps, count, err := c.DBRPMappingService.FindMany(
 		context.Background(),
