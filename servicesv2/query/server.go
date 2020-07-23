@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/influxdata/flux"
 	"github.com/influxdata/influxdb/flux/client"
-	"github.com/influxdata/influxdb/services/httpd"
 	"github.com/influxdata/influxdb/services/storage"
 	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
 )
@@ -21,7 +20,7 @@ type QueryHandler struct {
 	chi.Router
 	api *kithttp.API
 
-	fluxController httpd.Controller
+	queryService QueryService
 }
 
 // httpDialect is an encoding dialect that can write metadata to HTTP headers
@@ -34,9 +33,9 @@ const (
 	prefix   = "/api/v2/query"
 )
 
-func NewHTTPQueryHandler(c httpd.Controller) *QueryHandler {
+func NewHTTPQueryHandler(s QueryService) *QueryHandler {
 	svr := &QueryHandler{
-		fluxController: c,
+		queryService: s,
 	}
 
 	r := chi.NewRouter()
@@ -45,11 +44,11 @@ func NewHTTPQueryHandler(c httpd.Controller) *QueryHandler {
 		middleware.RequestID,
 		middleware.RealIP,
 	)
-	r.Post("/", svr.handleQuery)
+	r.Post("/api/v2/query", svr.handleQuery)
 	return svr
 }
 
-func (h *QueryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
+func (h *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeQueryRequest(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -68,7 +67,7 @@ func (h *QueryHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 
 	// execute the query
 	// wrap auth middleware here to check if user is allowed to query
-	q, err := h.fluxController.Query(ctx, pr.Compiler)
+	q, err := h.queryService.Query(ctx, pr.Compiler)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		h.api.Err(w, r, err)
