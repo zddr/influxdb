@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/flux"
-	"github.com/influxdata/flux/memory"
+	"github.com/influxdata/flux/mock"
 	"github.com/influxdata/influxdb/flux/client"
 	"github.com/influxdata/influxdb/servicesv2/query"
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,7 +19,6 @@ import (
 
 func TestServer_HandleQuery(t *testing.T) {
 	h := query.NewHTTPQueryHandler(NewQueryServiceMock())
-	// called := false
 	qry := "foo"
 
 	q := client.QueryRequest{Query: qry}
@@ -49,12 +48,8 @@ type QueryServiceMock struct {
 func NewQueryServiceMock() *QueryServiceMock {
 	return &QueryServiceMock{
 		QueryFn: func(ctx context.Context, compiler flux.Compiler) (query flux.Query, e error) {
-			p, err := compiler.Compile(ctx)
-			if err != nil {
-				return nil, err
-			}
-			alloc := &memory.Allocator{}
-			return p.Start(ctx, alloc)
+			p := &mock.Program{}
+			return p.Start(ctx, nil)
 		},
 	}
 }

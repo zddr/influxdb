@@ -44,7 +44,7 @@ func NewHTTPQueryHandler(s QueryService) *QueryHandler {
 		middleware.RequestID,
 		middleware.RealIP,
 	)
-	r.Post("/api/v2/query", svr.handleQuery)
+	r.Post("/api/v2/query", svr.HandleQuery)
 	return svr
 }
 
