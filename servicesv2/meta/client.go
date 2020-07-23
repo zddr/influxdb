@@ -22,24 +22,26 @@ func (c *Client) Database(db string) *meta.DatabaseInfo {
 	)
 	if err != nil {
 		return nil
-	} else if count != 1 {
+	} else if count < 1 {
 		return nil
 	}
-	dbrp := dbrps[0]
+
 	dbinfo := meta.DatabaseInfo{
 		Name: db,
 	}
 
-	rp := dbrp.RetentionPolicy
-	if dbrp.Default {
-		dbinfo.DefaultRetentionPolicy = rp
-	}
+	for _, mapping := range dbrps {
+		rp := mapping.RetentionPolicy
+		if mapping.Default {
+			dbinfo.DefaultRetentionPolicy = rp
+		}
 
-	rpi, err := c.RetentionPolicy(db, rp)
-	if err != nil {
-		return nil
+		rpi, err := c.RetentionPolicy(db, rp)
+		if err != nil {
+			return nil
+		}
+		dbinfo.RetentionPolicies = append(dbinfo.RetentionPolicies, *rpi)
 	}
-	dbinfo.RetentionPolicies = append(dbinfo.RetentionPolicies, *rpi)
 
 	return &dbinfo
 }
@@ -69,7 +71,7 @@ func (c *Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, erro
 		return nil, err
 	}
 	rpi.Duration = bucket.RetentionPeriod
-	rpi.ShardGroupDuration = bucket.RetentionPeriod
+	rpi.ShardGroupDuration = shardGroupDuration(bucket.RetentionPeriod)
 	return &rpi, nil
 }
 
@@ -89,4 +91,13 @@ func (c *Client) CreateShardGroup(db, rp string, timestamp time.Time) (*meta.Sha
 		return nil, err
 	}
 	return sgi, nil
+}
+
+func shardGroupDuration(d time.Duration) time.Duration {
+	if d >= 180*24*time.Hour || d == 0 { // 6 months or 0
+		return 7 * 24 * time.Hour
+	} else if d >= 2*24*time.Hour { // 2 days
+		return 1 * 24 * time.Hour
+	}
+	return 1 * time.Hour
 }
