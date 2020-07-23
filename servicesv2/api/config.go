@@ -13,7 +13,7 @@ type Config struct {
 
 func NewConfig() Config {
 	user, _ := user.Current()
-	boltFile := fp.Join(user.HomeDir, ".influxdbv2/influxd.bolt")
+	boltFile := fp.Join(user.HomeDir, ".influxdbv2", "influxd.bolt")
 	return Config{
 		BindAddr: "localhost:9999",
 		BoltFile: boltFile,
