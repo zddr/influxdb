@@ -60,11 +60,6 @@ func (c *Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, erro
 	rpi := meta.RetentionPolicyInfo{
 		Name:     dbrp.RetentionPolicy,
 		ReplicaN: 1,
-		// We need to populate the duration values here
-		// Duration
-		// ShardGroupDuration
-		// ShardGroups
-		// Subscriptions - this one may be unnecessary
 	}
 
 	bucket, err := c.BucketService.FindBucket(context.Background(), v2.BucketFilter{
