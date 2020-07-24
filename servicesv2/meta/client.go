@@ -23,7 +23,7 @@ func NewClient(bucketSvc v2.BucketService, dbrpSvc v2.DBRPMappingServiceV2, shar
 	}
 }
 
-func (c *Client) Database(db string) *meta.DatabaseInfo {
+func (c Client) Database(db string) *meta.DatabaseInfo {
 	dbrps, count, err := c.DBRPMappingService.FindMany(
 		context.Background(),
 		v2.DBRPMappingFilterV2{Database: &db},
@@ -54,7 +54,7 @@ func (c *Client) Database(db string) *meta.DatabaseInfo {
 	return &dbinfo
 }
 
-func (c *Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, error) {
+func (c Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, error) {
 	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), v2.DBRPMappingFilterV2{
 		Database:        &db,
 		RetentionPolicy: &rp,
@@ -83,7 +83,7 @@ func (c *Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, erro
 	return &rpi, nil
 }
 
-func (c *Client) CreateShardGroup(db, rp string, timestamp time.Time) (*meta.ShardGroupInfo, error) {
+func (c Client) CreateShardGroup(db, rp string, timestamp time.Time) (*meta.ShardGroupInfo, error) {
 	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), v2.DBRPMappingFilterV2{
 		Database:        &db,
 		RetentionPolicy: &rp,
@@ -108,4 +108,8 @@ func shardGroupDuration(d time.Duration) time.Duration {
 		return 1 * 24 * time.Hour
 	}
 	return 1 * time.Hour
+}
+
+func (c Client) Databases() []meta.DatabaseInfo {
+	return []meta.DatabaseInfo{}
 }

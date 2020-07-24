@@ -37,6 +37,7 @@ import (
 	"github.com/influxdata/influxdb/servicesv2/dbrp"
 	ihttp "github.com/influxdata/influxdb/servicesv2/http"
 	kithttp "github.com/influxdata/influxdb/servicesv2/kit/http"
+	metav2 "github.com/influxdata/influxdb/servicesv2/meta"
 	v2Query "github.com/influxdata/influxdb/servicesv2/query"
 	"github.com/influxdata/influxdb/servicesv2/shard_group"
 	"github.com/influxdata/influxdb/servicesv2/tenant"
@@ -416,9 +417,11 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	writeHandler := write.NewHTTPWriteHandler(writeSvc, ts.OrgSvc, ts.BucketSvc, dbrpSvc)
 	v2Api.WithResourceHandler(writeHandler.V1ResourceHandler())
 	v2Api.WithResourceHandler(writeHandler.V2ResourceHandler())
+	metaClientV2 := metav2.NewClient(ts.BucketSvc, dbrpSvc, shardGroupSvc)
 
 	var qService v2Query.QueryService
-	qService = v2Query.NewService()
+	ss := storage.NewStore(s.TSDBStore, s.MetaClient)
+	qService = v2Query.NewService(*metaClientV2, reads.NewReader(ss))
 	qService = v2Query.NewAuthedQueryService(qService)
 	queryHandler := v2Query.NewHTTPQueryHandler(qService, ts.OrgSvc, ts.BucketSvc, dbrpSvc)
 	v2Api.WithResourceHandler(queryHandler.V1ResourceHandler())

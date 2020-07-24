@@ -6,7 +6,9 @@ import (
 	"github.com/influxdata/flux"
 	"github.com/influxdata/flux/memory"
 	"github.com/influxdata/influxdb/flux/builtin"
+	iflux "github.com/influxdata/influxdb/flux/stdlib/influxdata/influxdb"
 	influxdb "github.com/influxdata/influxdb/servicesv2"
+	"github.com/influxdata/influxdb/servicesv2/meta"
 )
 
 type QueryService interface {
@@ -19,13 +21,13 @@ type Service struct {
 
 var _ QueryService = (*Service)(nil)
 
-func NewService() *Service {
+func NewService(metaClient meta.Client, reader iflux.Reader) *Service {
 	builtin.Initialize()
 
-	deps := flux.NewDefaultDependencies()
-	// if err != nil {
-	// 	panic(err)
-	// }
+	deps, err := iflux.NewDependencies(metaClient, reader, nil, false)
+	if err != nil {
+		panic(err)
+	}
 
 	return &Service{
 		fluxDeps: []flux.Dependency{deps},
