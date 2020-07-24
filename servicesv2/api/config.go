@@ -20,16 +20,6 @@ func NewConfig() Config {
 	}
 }
 
-func (c *Config) WithBindAddr(addr string) Config {
-	c.BindAddr = addr
-	return *c
-}
-
-func (c *Config) WithBoltFile(path string) Config {
-	c.BoltFile = path
-	return *c
-}
-
 func (c *Config) Validate() error {
 	// confirm that BindAddr is a valid URL
 	if err := c.ValidateBindAddr(); err != nil {
