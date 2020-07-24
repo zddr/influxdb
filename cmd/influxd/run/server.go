@@ -420,7 +420,7 @@ func (s *Server) appendAPIv2Service(config api.Config) {
 	metaClientV2 := metav2.NewClient(ts.BucketSvc, dbrpSvc, shardGroupSvc)
 
 	var qService v2Query.QueryService
-	ss := storage.NewStore(s.TSDBStore, s.MetaClient)
+	ss := storage.NewStore(s.TSDBStore, metaClientV2)
 	qService = v2Query.NewService(*metaClientV2, reads.NewReader(ss))
 	qService = v2Query.NewAuthedQueryService(qService)
 	queryHandler := v2Query.NewHTTPQueryHandler(qService, ts.OrgSvc, ts.BucketSvc, dbrpSvc)

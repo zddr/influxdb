@@ -101,7 +101,7 @@ func (c Client) CreateShardGroup(db, rp string, timestamp time.Time) (*meta.Shar
 	return sgi, nil
 }
 
-func (c Client) ShardGroupsByTimeRange(database, policy string, min, max time.Time) (a []meta.ShardGroupInfo, err error) {
+func (c Client) ShardGroupsByTimeRange(db, rp string, min, max time.Time) (a []meta.ShardGroupInfo, err error) {
 	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), influxdb.DBRPMappingFilterV2{
 		Database:        &db,
 		RetentionPolicy: &rp,
