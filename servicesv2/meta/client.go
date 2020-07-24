@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb/services/meta"
-	v2 "github.com/influxdata/influxdb/servicesv2"
+	influxdb "github.com/influxdata/influxdb/servicesv2"
 )
 
 type Client struct {
-	BucketService      v2.BucketService
-	DBRPMappingService v2.DBRPMappingServiceV2
-	ShardGroupService  v2.ShardGroupService
+	BucketService      influxdb.BucketService
+	DBRPMappingService influxdb.DBRPMappingServiceV2
+	ShardGroupService  influxdb.ShardGroupService
 }
 
-func NewClient(bucketSvc v2.BucketService, dbrpSvc v2.DBRPMappingServiceV2, shardGroupSvc v2.ShardGroupService) *Client {
+func NewClient(bucketSvc influxdb.BucketService, dbrpSvc influxdb.DBRPMappingServiceV2, shardGroupSvc influxdb.ShardGroupService) *Client {
 	return &Client{
 		BucketService:      bucketSvc,
 		DBRPMappingService: dbrpSvc,
@@ -26,7 +26,7 @@ func NewClient(bucketSvc v2.BucketService, dbrpSvc v2.DBRPMappingServiceV2, shar
 func (c Client) Database(db string) *meta.DatabaseInfo {
 	dbrps, count, err := c.DBRPMappingService.FindMany(
 		context.Background(),
-		v2.DBRPMappingFilterV2{Database: &db},
+		influxdb.DBRPMappingFilterV2{Database: &db},
 	)
 	if err != nil {
 		return nil
@@ -55,7 +55,7 @@ func (c Client) Database(db string) *meta.DatabaseInfo {
 }
 
 func (c Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, error) {
-	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), v2.DBRPMappingFilterV2{
+	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), influxdb.DBRPMappingFilterV2{
 		Database:        &db,
 		RetentionPolicy: &rp,
 	})
@@ -72,7 +72,7 @@ func (c Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, error
 		ReplicaN: 1,
 	}
 
-	bucket, err := c.BucketService.FindBucket(context.Background(), v2.BucketFilter{
+	bucket, err := c.BucketService.FindBucket(context.Background(), influxdb.BucketFilter{
 		ID: &dbrp.BucketID,
 	})
 	if err != nil {
@@ -84,7 +84,7 @@ func (c Client) RetentionPolicy(db, rp string) (*meta.RetentionPolicyInfo, error
 }
 
 func (c Client) CreateShardGroup(db, rp string, timestamp time.Time) (*meta.ShardGroupInfo, error) {
-	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), v2.DBRPMappingFilterV2{
+	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), influxdb.DBRPMappingFilterV2{
 		Database:        &db,
 		RetentionPolicy: &rp,
 	})
@@ -99,6 +99,24 @@ func (c Client) CreateShardGroup(db, rp string, timestamp time.Time) (*meta.Shar
 		return nil, err
 	}
 	return sgi, nil
+}
+
+func (c Client) ShardGroupsByTimeRange(database, policy string, min, max time.Time) (a []meta.ShardGroupInfo, err error) {
+	dbrps, count, err := c.DBRPMappingService.FindMany(context.Background(), influxdb.DBRPMappingFilterV2{
+		Database:        &db,
+		RetentionPolicy: &rp,
+	})
+	if err != nil {
+		return nil, err
+	} else if count != 1 {
+		return nil, fmt.Errorf("expected 1 DBRP - got %d", count)
+	}
+	dbrp := dbrps[0]
+	return c.ShardGroupService.FindShardGroups(context.Background(), influxdb.FindShardFilter{
+		BucketID: &dbrp.BucketID,
+		Min:      &min,
+		Max:      &max,
+	})
 }
 
 func shardGroupDuration(d time.Duration) time.Duration {
