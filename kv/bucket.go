@@ -488,10 +488,6 @@ func (s *Service) createBucket(ctx context.Context, tx Tx, b *influxdb.Bucket) (
 		return err
 	}
 
-	if err := s.createUserResourceMappingForOrg(ctx, tx, b.OrgID, b.ID, influxdb.BucketsResourceType); err != nil {
-		return err
-	}
-
 	uid, _ := icontext.GetUserID(ctx)
 	return s.audit.Log(resource.Change{
 		Type:           resource.Create,
