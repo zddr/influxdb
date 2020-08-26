@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/influxdb/v2"
 	ihttp "github.com/influxdata/influxdb/v2/http"
 	"github.com/influxdata/influxdb/v2/kv"
+	"github.com/influxdata/influxdb/v2/mock"
 	"github.com/influxdata/influxdb/v2/tenant"
 	itesting "github.com/influxdata/influxdb/v2/testing"
 	"go.uber.org/zap/zaptest"
@@ -77,4 +78,66 @@ func initBucketHttpService(f itesting.BucketFields, t *testing.T) (influxdb.Buck
 
 func TestHTTPBucketService(t *testing.T) {
 	itesting.BucketService(initBucketHttpService, t)
+}
+
+func TestBucketService_Client(t *testing.T) {
+	type fields struct {
+		bucketService influxdb.BucketService
+	}
+	type args struct {
+		name string
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "post owners",
+			fields: fields{
+				bucketService: &mock.BucketService{
+					FindBucketsFn: func(ctx context.Context, filter influxdb.BucketFilter, opts ...influxdb.FindOptions) ([]*influxdb.Bucket, int, error) {
+						return []*influxdb.Bucket{}, 0, nil
+					},
+				},
+			},
+			args: args{
+				name: "abc",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// create server
+			h := tenant.NewHTTPBucketHandler(zaptest.NewLogger(t), tt.fields.bucketService, nil, nil, nil)
+			router := chi.NewRouter()
+			router.Mount("/api/v2/buckets", h)
+			s := httptest.NewServer(router)
+			defer s.Close()
+			ctx := context.Background()
+
+			b := influxdb.Bucket{Name: "abc"}
+
+			httpClient, err := ihttp.NewHTTPClient(s.URL, "", false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := tenant.BucketClientService{Client: httpClient}
+			err = c.CreateBucket(ctx, b)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, n, err := c.FindBuckets(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if n != 1 {
+				t.Fatalf("expected 1 bucket to be created, got: %d", n)
+			}
+		})
+	}
 }

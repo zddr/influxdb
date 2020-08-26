@@ -71,29 +71,33 @@ func BucketService(
 		name string
 		fn   bucketServiceF
 	}{
+		// {
+		// 	name: "CreateBucket",
+		// 	fn:   CreateBucket,
+		// },
+		// {
+		// 	name: "FindBucketByID",
+		// 	fn:   FindBucketByID,
+		// },
+		// {
+		// 	name: "FindBuckets",
+		// 	fn:   FindBuckets,
+		// },
+		// {
+		// 	name: "FindBucket",
+		// 	fn:   FindBucket,
+		// },
+		// {
+		// 	name: "UpdateBucket",
+		// 	fn:   UpdateBucket,
+		// },
+		// {
+		// 	name: "DeleteBucket",
+		// 	fn:   DeleteBucket,
+		// },
 		{
-			name: "CreateBucket",
-			fn:   CreateBucket,
-		},
-		{
-			name: "FindBucketByID",
-			fn:   FindBucketByID,
-		},
-		{
-			name: "FindBuckets",
-			fn:   FindBuckets,
-		},
-		{
-			name: "FindBucket",
-			fn:   FindBucket,
-		},
-		{
-			name: "UpdateBucket",
-			fn:   UpdateBucket,
-		},
-		{
-			name: "DeleteBucket",
-			fn:   DeleteBucket,
+			name: "SearchAllBuckets",
+			fn:   SearchAllBuckets,
 		},
 	}
 
@@ -1227,6 +1231,71 @@ func FindBucket(
 			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
 
 			if diff := cmp.Diff(bucket, tt.wants.bucket, bucketCmpOptions...); diff != "" {
+				t.Errorf("buckets are different -got/+want\ndiff %s", diff)
+			}
+		})
+	}
+}
+
+func SearchAllBuckets(
+	init func(BucketFields, *testing.T) (influxdb.BucketService, string, func()),
+	t *testing.T,
+) {
+	type args struct {
+		ID             influxdb.ID
+		name           string
+		organization   string
+		organizationID influxdb.ID
+		findOptions    influxdb.FindOptions
+	}
+
+	type wants struct {
+		buckets []*influxdb.Bucket
+		err     error
+	}
+	tests := []struct {
+		name   string
+		fields BucketFields
+		args   args
+		wants  wants
+	}{
+		{
+			name: "search by name across pages",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, opPrefix, done := init(tt.fields, t)
+			defer done()
+			ctx := context.Background()
+
+			filter := influxdb.BucketFilter{}
+			if tt.args.ID.Valid() {
+				filter.ID = &tt.args.ID
+			}
+			if tt.args.organizationID.Valid() {
+				filter.OrganizationID = &tt.args.organizationID
+			}
+			if tt.args.organization != "" {
+				filter.Org = &tt.args.organization
+			}
+			if tt.args.name != "" {
+				filter.Name = &tt.args.name
+			}
+
+			buckets, _, err := s.FindBuckets(ctx, filter, tt.args.findOptions)
+			diffPlatformErrors(tt.name, err, tt.wants.err, opPrefix, t)
+
+			// remove system buckets
+			filteredBuckets := []*influxdb.Bucket{}
+			for _, b := range buckets {
+				if b.Type != influxdb.BucketTypeSystem {
+					filteredBuckets = append(filteredBuckets, b)
+				}
+			}
+
+			if diff := cmp.Diff(filteredBuckets, tt.wants.buckets, bucketCmpOptions...); diff != "" {
 				t.Errorf("buckets are different -got/+want\ndiff %s", diff)
 			}
 		})
