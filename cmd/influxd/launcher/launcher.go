@@ -90,7 +90,6 @@ const (
 	LogTracing = "log"
 	// JaegerTracing enables tracing via the Jaeger client library
 	JaegerTracing = "jaeger"
-	// Max Integer
 	MaxInt = 1<<uint(strconv.IntSize-1) - 1
 )
 
